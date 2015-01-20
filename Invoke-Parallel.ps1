@@ -248,9 +248,9 @@
                     Foreach($runspace in $runspaces) {
                     
                         #get the duration - inaccurate
-                        $currentdate = get-date
+                        $currentdate = Get-Date
                         $runtime = $currentdate - $runspace.startTime
-                        $runMin = [math]::round( $runtime.totalminutes ,2 )
+                        $runMin = [math]::Round( $runtime.totalminutes ,2 )
 
                         #set up log object
                         $log = "" | select Date, Action, Runtime, Status, Details
