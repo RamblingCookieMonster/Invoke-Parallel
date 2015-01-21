@@ -435,10 +435,17 @@
             foreach($object in $allObjects){
         
                 #region add scripts to runspace pool
-                
-                    #Create the powershell instance and supply the scriptblock with the other parameters
-                    $powershell = [powershell]::Create().AddScript($ScriptBlock).AddArgument($object).AddArgument($parameter)
-    
+                    
+                    #Create the powershell instance, set verbose if needed, supply the scriptblock and parameters
+                    $powershell = [powershell]::Create()
+                    
+                    if($VerbosePreference -eq 'Continue')
+                    {
+                        [void]$PowerShell.AddScript({$VerbosePreference = 'Continue'})
+                    }
+
+                    [void]$PowerShell.AddScript($ScriptBlock).AddArgument($object).AddArgument($parameter)
+
                     #Add the runspace into the powershell instance
                     $powershell.RunspacePool = $runspacepool
     
