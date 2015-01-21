@@ -271,7 +271,8 @@
                                 #set the logging info and move the file to completed
                                 $log.status = "CompletedWithErrors"
                                 Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
-
+                                Write-Warning "Errors from worker runspace:"
+                                $runspace.powershell.Streams.Error
                             }
                             else {
                                 
