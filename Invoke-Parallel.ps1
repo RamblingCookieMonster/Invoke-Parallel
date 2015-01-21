@@ -182,15 +182,15 @@
     )
     
     Begin {
-        
-        Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
-        
+                
         #No max queue specified?  Estimate one.
         if( -not $PSBoundParameters.ContainsKey('MaxQueue') )
         {
             if($RunspaceTimeout -ne 0){ $MaxQueue = $Throttle }
             else{ $MaxQueue = $Throttle * 3 }
         }
+
+        Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
 
         #If they want to import variables or modules, create a clean runspace, get loaded items, use those to exclude items
         if($ImportVariables -or $ImportModules)
@@ -398,7 +398,7 @@
 
             #write initial log entry
             $log = "" | Select Date, Action, Runtime, Status, Details
-                $log.Date = $launchDate
+                $log.Date = Get-Date
                 $log.Action = "Batch processing started"
                 $log.Runtime = $null
                 $log.Status = "Started"
@@ -459,12 +459,13 @@
                     Get-RunspaceData
 
                     #If we have more running than max queue (used to control timeout accuracy)
+                    #Script scope resolves odd PowerShell 2 issue
                     $firstRun = $true
-                    while ($runspaces.count -ge $MaxQueue) {
+                    while ($runspaces.count -ge $Script:MaxQueue) {
 
                         #give verbose output
                         if($firstRun){
-                            Write-Verbose "$($runspaces.count) items running - exceeded $maxQueue limit."
+                            Write-Verbose "$($runspaces.count) items running - exceeded $Script:MaxQueue limit."
                         }
                         $firstRun = $false
                     
