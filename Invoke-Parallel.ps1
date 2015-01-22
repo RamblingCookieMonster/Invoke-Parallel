@@ -186,8 +186,8 @@
         #No max queue specified?  Estimate one.
         if( -not $PSBoundParameters.ContainsKey('MaxQueue') )
         {
-            if($RunspaceTimeout -ne 0){ $MaxQueue = $Throttle }
-            else{ $MaxQueue = $Throttle * 3 }
+            if($RunspaceTimeout -ne 0){ $script:MaxQueue = $Throttle }
+            else{ $script:MaxQueue = $Throttle * 3 }
         }
 
         Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
@@ -264,9 +264,7 @@
                             $script:completedCount++
                         
                             #check if there were errors
-                            $runspaceErrors = $runspace.powershell.HadErrors
-
-                            if($runspaceErrors) {
+                            if($runspace.powershell.Streams.Error.Count -gt 0) {
                                 
                                 #set the logging info and move the file to completed
                                 $log.status = "CompletedWithErrors"
@@ -486,7 +484,7 @@
                 #endregion add scripts to runspace pool
             }
                      
-            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f (@(($runspaces | Where {$_.Runspace -ne $Null}).Count)) )
+            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f (@($runspaces | Where {$_.Runspace -ne $Null}).Count) )
             Get-RunspaceData -wait
 
             if (!$quiet) {
