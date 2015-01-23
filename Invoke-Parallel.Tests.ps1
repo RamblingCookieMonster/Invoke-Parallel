@@ -15,5 +15,21 @@ Describe 'Invoke-Parallel with default parameters' {
         $out.Count | Should Be 0
         $OutError[0].ToString() | Should Be "A Fake Error!"
     }
+
+    It 'should import variables with one letter name' {
+        $a = "Hello"
+        $out = 0 | Invoke-Parallel -ImportVariables -ScriptBlock {
+            $a
+        } | Should Be "Hello"
+    }
+
+    It 'should import all variables' {
+        $a = "Hello"
+        $longvar = "World!"
+        $out = 0 | Invoke-Parallel -ImportVariables -ScriptBlock {
+            "$a $longvar"
+        }
+        $out | Should Be "Hello World!"
+    }
 }
 
