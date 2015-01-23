@@ -9,7 +9,9 @@ Describe 'Invoke-Parallel with default parameters' {
     }
 
     It 'should output runspace errors to error stream' {
-        $out = 0 | Invoke-Parallel -ScriptBlock {Write-Error "A Fake Error!"} -ErrorVariable OutError
+        $out = 0 | Invoke-Parallel -ErrorVariable OutError -ErrorAction SilentlyContinue -ScriptBlock {
+            Write-Error "A Fake Error!"
+        }
         $out.Count | Should Be 0
         $OutError[0].ToString() | Should Be "A Fake Error!"
     }
