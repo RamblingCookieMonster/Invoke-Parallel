@@ -6,7 +6,8 @@
     .DESCRIPTION
         Function to control parallel processing using runspaces
 
-            Note that each runspace will not have access to variables and commands loaded in your session or in other runspaces.  The parameter parameter is included to help with this.
+            Note that each runspace will not have access to variables and commands loaded in your session or in other runspaces by default.  
+            This behaviour can be changed with parameters.
 
     .PARAMETER ScriptFile
         File to run against all input objects.  Must include parameter to take in the input object, or use $args.  Optionally, include parameter to take in parameter.  Example: C:\script.ps1
@@ -28,8 +29,6 @@
 
     .PARAMETER ImportVariables
         If specified, get user session variables and add them to the initial session state
-
-        Note: I've seen this fail with single character variable names
 
     .PARAMETER ImportModules
         If specified, get loaded modules and pssnapins, add them to the initial session state
@@ -217,7 +216,10 @@
             Function _temp {[cmdletbinding()] param() }
             $VariablesToExclude = @( (Get-Command _temp | select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
 
-            $UserVariables = Get-Variable -Exclude $VariablesToExclude
+            # we don't use 'Get-Variable -Exclude', because it uses regexps. 
+            # One of the veriables that we pass is '$?'. 
+            # There could be other variables with such problems.
+            $UserVariables = Get-Variable | ? { -not ($VariablesToExclude -contains $_.Name) } 
             $UserModules = Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path
             $UserSnapins = Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } 
             Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
