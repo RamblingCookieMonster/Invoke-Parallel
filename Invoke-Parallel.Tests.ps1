@@ -9,8 +9,8 @@ Describe 'Invoke-Parallel with default parameters' {
     }
 
     It 'execute sleep concurrently' {
-        $m = Measure-Command { (0..1) | Invoke-Parallel -ScriptBlock { sleep 1 } }
-        $m.TotalSeconds -le 2.0 | Should Be $true
+        $m = Measure-Command { (1..10) | Invoke-Parallel -ScriptBlock { sleep 0.1 } }
+        $m.TotalSeconds -le 1.0 | Should Be $true
     }    
 }
 
