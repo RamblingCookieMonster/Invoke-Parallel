@@ -221,13 +221,13 @@
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
                 $UserVariables = Get-Variable | ? { -not ($VariablesToExclude -contains $_.Name) } 
+                Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
             }
 
             if ($ImportModules) 
             {
                 $UserModules = Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path
                 $UserSnapins = Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } 
-                Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
             }
         }
 
@@ -365,14 +365,14 @@
 
             #If specified, add variables and modules/snapins to session state
             $sessionstate = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-            if($ImportVariables)
+            if ($ImportVariables)
             {
                 foreach($Variable in $UserVariables)
                 {
                     $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null))
                 }
             }
-            if($ImportModules)
+            if ($ImportModules)
             {
                 foreach($ModulePath in $UserModules)
                 {
