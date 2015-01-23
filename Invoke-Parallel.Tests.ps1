@@ -1,8 +1,8 @@
 Import-Module -Force $PSScriptRoot\Invoke-Parallel.ps1
 
-Describe 'Invoke-Parallel with default parameters' {
+Describe 'Invoke-Parallel' {
     
-    Context 'Strict mode' {
+    Context 'Strict mode' { 
 
         Set-StrictMode -Version latest
 
