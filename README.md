@@ -1,3 +1,5 @@
+[![Build status](https://ci.appveyor.com/api/projects/status/xsbki1rrxo2nh3fy/branch/master?svg=true)](https://ci.appveyor.com/project/RamblingCookieMonster/invoke-parallel/branch/master)
+
 Invoke-Parallel
 ==========
 
@@ -7,15 +9,15 @@ This function will take in a script or scriptblock, and run it against specified
 
     #Download and unblock the file(s).
     #Dot source the file.
-    . "\\Path\To\Invoke-Parallel.ps1"
+        . "\\Path\To\Invoke-Parallel.ps1"
     
     #Get help for the function
-    Get-Help Invoke-Parallel -Full
+        Get-Help Invoke-Parallel -Full
 
-    #Use Invoke-Parallel
-    $Number = 2
-		1..10 | Invoke-Parallel -ImportVariables -ScriptBlock { $Number * $_ }
-  
+    #Use Invoke-Parallel with variables in your session
+        $Number = 2
+        1..10 | Invoke-Parallel -ImportVariables -ScriptBlock { $Number * $_ }
+
 Some outdated notes and details are available on the [TechNet Galleries submission](http://gallery.technet.microsoft.com/Run-Parallel-Parallel-377fd430).
 
 # Help!
