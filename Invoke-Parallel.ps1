@@ -192,7 +192,7 @@
         Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
 
         #If they want to import variables or modules, create a clean runspace, get loaded items, use those to exclude items
-        if($ImportVariables -or $ImportModules)
+        if ($ImportVariables -or $ImportModules)
         {
             $StandardUserEnv = [powershell]::Create().addscript({
 
@@ -210,21 +210,27 @@
                     Modules = $Modules
                     Snapins = $Snapins
                 }
-            }).invoke()
+            }).invoke()[0]
             
-            #Exclude common parameters, bound parameters, and automatic variables
-            Function _temp {[cmdletbinding()] param() }
-            $VariablesToExclude = @( (Get-Command _temp | select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+            if ($ImportVariables) {
+                #Exclude common parameters, bound parameters, and automatic variables
+                Function _temp {[cmdletbinding()] param() }
+                $VariablesToExclude = @( (Get-Command _temp | select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
 
-            # we don't use 'Get-Variable -Exclude', because it uses regexps. 
-            # One of the veriables that we pass is '$?'. 
-            # There could be other variables with such problems.
-            $UserVariables = Get-Variable | ? { -not ($VariablesToExclude -contains $_.Name) } 
-            $UserModules = Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path
-            $UserSnapins = Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } 
-            Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
+                # we don't use 'Get-Variable -Exclude', because it uses regexps. 
+                # One of the veriables that we pass is '$?'. 
+                # There could be other variables with such problems.
+                $UserVariables = Get-Variable | ? { -not ($VariablesToExclude -contains $_.Name) } 
+            }
+
+            if ($ImportModules) 
+            {
+                $UserModules = Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path
+                $UserSnapins = Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } 
+                Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
+            }
         }
-        
+
         #region functions
             
             Function Get-RunspaceData {

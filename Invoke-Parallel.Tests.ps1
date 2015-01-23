@@ -2,34 +2,59 @@ Import-Module -Force $PSScriptRoot\Invoke-Parallel.ps1
 
 Describe 'Invoke-Parallel with default parameters' {
     
-    It 'should out string' {
-        $out = (0..10) | Invoke-Parallel -ScriptBlock { "a$_" } 
-        $out.Count | Should Be 11
-        $out[5][0] | Should Be 'a'
-    }
+    Context 'Strict mode' {
 
-    It 'should output runspace errors to error stream' {
-        $out = 0 | Invoke-Parallel -ErrorVariable OutError -ErrorAction SilentlyContinue -ScriptBlock {
-            Write-Error "A Fake Error!"
+        Set-StrictMode -Version latest
+
+        It 'should out string' {
+            $out = (0..10) | Invoke-Parallel { "a$_" } 
+            $out.Count | Should Be 11
+            $out[5][0] | Should Be 'a'
         }
-        $out.Count | Should Be 0
-        $OutError[0].ToString() | Should Be "A Fake Error!"
-    }
 
-    It 'should import variables with one letter name' {
-        $a = "Hello"
-        $out = 0 | Invoke-Parallel -ImportVariables -ScriptBlock {
-            $a
-        } | Should Be "Hello"
-    }
-
-    It 'should import all variables' {
-        $a = "Hello"
-        $longvar = "World!"
-        $out = 0 | Invoke-Parallel -ImportVariables -ScriptBlock {
-            "$a $longvar"
+        It 'should output runspace errors to error stream' {
+            $out = 0 | Invoke-Parallel -ErrorVariable OutError -ErrorAction SilentlyContinue {
+                Write-Error "A Fake Error!"
+            }
+            $out | Should Be $null
+            $OutError[0].ToString() | Should Be "A Fake Error!"
         }
-        $out | Should Be "Hello World!"
+
+        It 'should import variables with one letter name' {
+            $a = "Hello"
+            0 | Invoke-Parallel -ImportVariables {
+                $a
+            } | Should Be "Hello"
+        }
+
+        It 'should import all variables' {
+            $a = "Hello"
+            $longvar = "World!"
+            0 | Invoke-Parallel -ImportVariables {
+                "$a $longvar"
+            } | Should Be "Hello World!"
+        }
+
+        It 'should not import variables when not specified' {
+            $a = "Hello"
+            $longvar = "World!"
+            0 | Invoke-Parallel {
+                "$a $longvar"
+            } | Should Be " "
+        }
+
+        It 'should import modules' {
+            0 | Invoke-Parallel -ImportModules {
+                Get-Module Pester
+            } | Should not Be $null
+        }
+
+        It 'should not import modules when not specified' {
+            0 | Invoke-Parallel {
+                Get-Module Pester
+            } | Should Be $null
+        }
+
     }
 }
 
