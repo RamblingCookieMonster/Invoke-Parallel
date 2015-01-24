@@ -55,6 +55,23 @@ Describe 'Invoke-Parallel' {
             } | Should Be $null
         }
 
+        It 'should honor time out' {
+            $timeout = $null
+            0 | Invoke-Parallel -RunspaceTimeout 1 -WarningVariable TimeOut {
+                Start-Sleep -Seconds 2
+            }
+            $timeout | Should Match "Runspace timed out at*"
+
+        }
+
+        It 'should pass in a specified variable as $parameter' {
+            $a = 5
+            0 | Invoke-Parallel -Parameter $a {
+                $parameter
+            } | Should Be 5
+
+        }
+
     }
 }
 

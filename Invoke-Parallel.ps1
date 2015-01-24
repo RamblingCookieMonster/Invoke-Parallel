@@ -49,7 +49,6 @@
 		Do not dispose of timed out tasks or attempt to close the runspace if threads have timed out. This will prevent the script from hanging in certain situations where threads become non-responsive, at the expense of leaking memory within the PowerShell host.
 
     .PARAMETER MaxQueue
-
         Maximum number of powershell instances to add to runspace pool.  If this is higher than $throttle, $timeout will be inaccurate
         
         If this is equal or less than throttle, there will be a performance impact
@@ -58,16 +57,10 @@
         The default value is $throttle, if $runspaceTimeout is specified
 
     .PARAMETER LogFile
-
         Path to a file where we can log results, including run time for each thread, whether it completes, completes with errors, or times out.
 
 	.PARAMETER Quiet
-
 		Disable progress bar.
-
-	.PARAMETER PassThru
-
-		Pass objects from timed out threads thru the pipeline. 
 
     .EXAMPLE
         Each example uses Test-ForPacs.ps1 which includes the following code:
@@ -174,7 +167,7 @@
 
             [int]$MaxQueue,
 
-        [validatescript({test-path (Split-Path $_ -parent)})]
+        [validatescript({Test-Path (Split-Path $_ -parent)})]
             [string]$LogFile = "C:\temp\log.log",
 
 			[switch] $Quiet = $false
@@ -215,12 +208,12 @@
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
-                $VariablesToExclude = @( (Get-Command _temp | select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+                $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
 
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
-                $UserVariables = Get-Variable | ? { -not ($VariablesToExclude -contains $_.Name) } 
+                $UserVariables = Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } 
                 Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
             }
 
@@ -304,9 +297,8 @@
                             
 							#add logging details and cleanup
                             $log.status = "TimedOut"
-                            Write-verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
-
-							if ($PassThru) { $runspace.object }
+                            Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
+                            Write-Warning "Runspace timed out at $($runtime.totalseconds) seconds for the object:`n$($runspace.object | out-string)"
 
                             #Depending on how it hangs, we could still get stuck here as dispose calls a synchronous method on the powershell instance
                             if (!$noCloseOnTimeout) { $runspace.powershell.dispose() }
@@ -446,12 +438,17 @@
                     #Create the powershell instance, set verbose if needed, supply the scriptblock and parameters
                     $powershell = [powershell]::Create()
                     
-                    if($VerbosePreference -eq 'Continue')
+                    if ($VerbosePreference -eq 'Continue')
                     {
                         [void]$PowerShell.AddScript({$VerbosePreference = 'Continue'})
                     }
 
-                    [void]$PowerShell.AddScript($ScriptBlock).AddArgument($object).AddArgument($parameter)
+                    [void]$PowerShell.AddScript($ScriptBlock).AddArgument($object)
+
+                    if ($parameter)
+                    {
+                        [void]$PowerShell.AddArgument($parameter)
+                    }
 
                     #Add the runspace into the powershell instance
                     $powershell.RunspacePool = $runspacepool
