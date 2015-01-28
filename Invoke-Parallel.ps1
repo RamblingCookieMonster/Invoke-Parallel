@@ -136,7 +136,7 @@
         Credit to Sergei Vorobev for the ImportModules and ImportVariables idea, and basis for implementation
 
     .LINK
-        http://gallery.technet.microsoft.com/Run-Parallel-Parallel-377fd430
+        https://github.com/RamblingCookieMonster/Invoke-Parallel
     #>
     [cmdletbinding(DefaultParameterSetName='ScriptBlock')]
     Param (   
