@@ -176,10 +176,15 @@
     Begin {
                 
         #No max queue specified?  Estimate one.
+        #We use the script scope to resolve an odd PowerShell 2 issue where MaxQueue isn't seen later in the function
         if( -not $PSBoundParameters.ContainsKey('MaxQueue') )
         {
             if($RunspaceTimeout -ne 0){ $script:MaxQueue = $Throttle }
             else{ $script:MaxQueue = $Throttle * 3 }
+        }
+        else
+        {
+            $script:MaxQueue = $MaxQueue
         }
 
         Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
@@ -238,11 +243,10 @@
                     $more = $false
 
                     #Progress bar if we have inputobject count (bound parameter)
-                    if (!$Quiet) {
-						Write-Progress  -Activity "Running Query"`
-							-Status "Starting threads"`
+                    if (-not $Quiet) {
+						Write-Progress  -Activity "Running Query" -Status "Starting threads"`
 							-CurrentOperation "$startedCount threads defined - $totalCount input objects - $script:completedCount input objects processed"`
-							-PercentComplete ($script:completedCount / $totalCount * 100)
+							-PercentComplete $( Try { $script:completedCount / $totalCount * 100 } Catch {0} )
 					}
 
                     #run through each runspace.           
@@ -403,7 +407,9 @@
                 $log.Runtime = $null
                 $log.Status = "Started"
                 $log.Details = $null
-                if($logFile) { ($log | convertto-csv -Delimiter ";" -NoTypeInformation)[1] | Out-File $LogFile -Append }
+                if($logFile) {
+                    ($log | convertto-csv -Delimiter ";" -NoTypeInformation)[1] | Out-File $LogFile -Append
+                }
 
 			$timedOutTasks = $false
 
@@ -490,20 +496,18 @@
                 #endregion add scripts to runspace pool
             }
                      
-            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f (@($runspaces | Where {$_.Runspace -ne $Null}).Count) )
+            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where {$_.Runspace -ne $Null}).Count) )
             Get-RunspaceData -wait
 
-            if (!$quiet) {
-			    Write-Progress -Activity "Running Query"`
-				    -Status "Starting threads"`
-				    -Completed
+            if (-not $quiet) {
+			    Write-Progress -Activity "Running Query" -Status "Starting threads" -Completed
 		    }
 
         }
         Finally
         {
-
-            if ( ($timedOutTasks -eq $false) -or (($timedOutTasks -eq $true) -and ($noCloseOnTimeout -eq $false)) ) {
+            #Close the runspace pool, unless we specified no close on timeout and something timed out
+            if ( ($timedOutTasks -eq $false) -or ( ($timedOutTasks -eq $true) -and ($noCloseOnTimeout -eq $false) ) ) {
 	            Write-Verbose "Closing the runspace pool"
 			    $runspacepool.close()
             }
