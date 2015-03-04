@@ -72,7 +72,7 @@ Describe "Invoke-Parallel PS$PSVersion" {
             $timeout = $null
             0 | Invoke-Parallel @Verbose -RunspaceTimeout 1 -ErrorVariable TimeOut -ScriptBlock {
                 Start-Sleep -Seconds 3
-            }
+            } -ErrorAction SilentlyContinue
             $timeout[0].ToString() | Should Match "Runspace timed out at*"
         }
 
