@@ -305,7 +305,7 @@
 							#add logging details and cleanup
                             $log.status = "TimedOut"
                             Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
-                            $PSCmdlet.WriteWarning( "Runspace timed out at $($runtime.totalseconds) seconds for the object:`n$($runspace.object | out-string)" )
+                            Write-Error "Runspace timed out at $($runtime.totalseconds) seconds for the object:`n$($runspace.object | out-string)"
 
                             #Depending on how it hangs, we could still get stuck here as dispose calls a synchronous method on the powershell instance
                             if (!$noCloseOnTimeout) { $runspace.powershell.dispose() }

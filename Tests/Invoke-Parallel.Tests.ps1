@@ -70,11 +70,10 @@ Describe "Invoke-Parallel PS$PSVersion" {
 
         It 'should honor time out' {
             $timeout = $null
-            0 | Invoke-Parallel @Verbose -RunspaceTimeout 1 -WarningVariable TimeOut -ScriptBlock {
+            0 | Invoke-Parallel @Verbose -RunspaceTimeout 1 -ErrorVariable TimeOut -ScriptBlock {
                 Start-Sleep -Seconds 3
             }
-            $timeout | Should Match "Runspace timed out at*"
-
+            $timeout[0].ToString() | Should Match "Runspace timed out at*"
         }
 
         It 'should pass in a specified variable as $parameter' {
@@ -82,7 +81,6 @@ Describe "Invoke-Parallel PS$PSVersion" {
             0 | Invoke-Parallel @Verbose -Parameter $a -ScriptBlock {
                 $parameter
             } | Should Be 5
-
         }
 
     }
