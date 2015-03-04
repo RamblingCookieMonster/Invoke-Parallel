@@ -12,10 +12,13 @@ param(
     $Timestamp = Get-date -uformat "%Y%m%d-%H%M%S"
     $PSVersion = $PSVersionTable.PSVersion.Major
     $TestFile = "TestResults_PS$PSVersion`_$TimeStamp.xml"
+
+    $Address = "https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)"
+
     $ProjectRoot = $ENV:APPVEYOR_BUILD_FOLDER
     Set-Location $ProjectRoot
    
-#Run a test with the current version of PowerShell
+#Run a test with the current version of PowerShell, upload results
     if($Test)
     {
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
@@ -25,10 +28,10 @@ param(
         Invoke-Pester -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
             Export-Clixml -Path "$ProjectRoot\PesterResults_PS$PSVersion`_$Timestamp.xml"
 
-        Push-AppveyorArtifact "$ProjectRoot\$TestFile"
+        (New-Object 'System.Net.WebClient').UploadFile( $Address, "$ProjectRoot\$TestFile" )
     }
 
-#If finalize is specified, check for failures and 
+#If finalize is specified, display errors and fail build if we ran into any
     If($Finalize)
     {
         #Show status...

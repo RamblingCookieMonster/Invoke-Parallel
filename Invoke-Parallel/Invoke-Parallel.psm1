@@ -517,3 +517,5 @@
         }       
     }
 }
+
+Export-ModuleMember -Function Invoke-Parallel
