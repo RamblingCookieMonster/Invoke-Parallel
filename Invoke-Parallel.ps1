@@ -214,18 +214,21 @@
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
                 $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+                Write-Verbose "Excluding variables $( ($VariablesToExclude | sort ) -join ", ")"
 
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
-                $UserVariables = Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } 
+                # Scope 2 required if we move to a real module
+                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
                 Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
+
             }
 
             if ($ImportModules) 
             {
-                $UserModules = Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path
-                $UserSnapins = Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } 
+                $UserModules = @( Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path )
+                $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } ) 
             }
         }
 
@@ -302,7 +305,7 @@
 							#add logging details and cleanup
                             $log.status = "TimedOut"
                             Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
-                            Write-Warning "Runspace timed out at $($runtime.totalseconds) seconds for the object:`n$($runspace.object | out-string)"
+                            Write-Error "Runspace timed out at $($runtime.totalseconds) seconds for the object:`n$($runspace.object | out-string)"
 
                             #Depending on how it hangs, we could still get stuck here as dispose calls a synchronous method on the powershell instance
                             if (!$noCloseOnTimeout) { $runspace.powershell.dispose() }
@@ -363,20 +366,29 @@
             $sessionstate = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
             if ($ImportVariables)
             {
-                foreach($Variable in $UserVariables)
+                if($UserVariables.count -gt 0)
                 {
-                    $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null))
+                    foreach($Variable in $UserVariables)
+                    {
+                        $sessionstate.Variables.Add( (New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
+                    }
                 }
             }
             if ($ImportModules)
             {
-                foreach($ModulePath in $UserModules)
+                if($UserModules.count -gt 0)
                 {
-                    $sessionstate.ImportPSModule($ModulePath)
+                    foreach($ModulePath in $UserModules)
+                    {
+                        $sessionstate.ImportPSModule($ModulePath)
+                    }
                 }
-                foreach($PSSnapin in $UserSnapins)
+                if($UserSnapins.count -gt 0)
                 {
-                    [void]$sessionstate.ImportPSSnapIn($PSSnapin, [ref]$null)
+                    foreach($PSSnapin in $UserSnapins)
+                    {
+                        [void]$sessionstate.ImportPSSnapIn($PSSnapin, [ref]$null)
+                    }
                 }
             }
 
