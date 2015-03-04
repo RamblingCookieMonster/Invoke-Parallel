@@ -11,7 +11,7 @@ if($env:APPVEYOR_REPO_BRANCH -and $env:APPVEYOR_REPO_BRANCH -notlike "master")
 }
 
 $PSVersion = $PSVersionTable.PSVersion.Major
-Import-Module $PSScriptRoot\..\Invoke-Parallel -Force
+Import-Module $PSScriptRoot\..\Invoke-Parallel\Invoke-Parallel.ps1 -Force
 
 Describe "Invoke-Parallel PS$PSVersion" {
     

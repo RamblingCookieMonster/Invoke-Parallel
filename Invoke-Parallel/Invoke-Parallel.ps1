@@ -219,8 +219,8 @@
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
-                # Scope 2 required now that we are in a module
-                $UserVariables = @( Get-Variable -scope 2 | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
+                # Scope 2 required if we move to a real module
+                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
                 Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
 
                 #Temporary verbose testing - I can't see variables declared in the pester tests?
@@ -378,7 +378,7 @@
                 {
                     foreach($Variable in $UserVariables)
                     {
-                        $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null))
+                        $sessionstate.Variables.Add( (New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
                     }
                 }
             }
@@ -537,5 +537,3 @@
         }       
     }
 }
-
-Export-ModuleMember -Function Invoke-Parallel

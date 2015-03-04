@@ -5,7 +5,8 @@
 #If Finalize is specified, we collect XML output, upload tests, and indicate build errors
 param(
     [switch]$Finalize,
-    [switch]$Test
+    [switch]$Test,
+    [string]$ProjectRoot = $ENV:APPVEYOR_BUILD_FOLDER
 )
 
 #Initialize some variables, move to the project root
@@ -14,8 +15,6 @@ param(
     $TestFile = "TestResults_PS$PSVersion`_$TimeStamp.xml"
 
     $Address = "https://ci.appveyor.com/api/testresults/nunit/$($env:APPVEYOR_JOB_ID)"
-
-    $ProjectRoot = $ENV:APPVEYOR_BUILD_FOLDER
     Set-Location $ProjectRoot
 
     $Verbose = @{}
@@ -33,8 +32,11 @@ param(
 
         Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
             Export-Clixml -Path "$ProjectRoot\PesterResults_PS$PSVersion`_$Timestamp.xml"
-
-        (New-Object 'System.Net.WebClient').UploadFile( $Address, "$ProjectRoot\$TestFile" )
+        
+        If($env:APPVEYOR_JOB_ID)
+        {
+            (New-Object 'System.Net.WebClient').UploadFile( $Address, "$ProjectRoot\$TestFile" )
+        }
     }
 
 #If finalize is specified, display errors and fail build if we ran into any
