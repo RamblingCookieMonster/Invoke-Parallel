@@ -17,6 +17,12 @@ param(
 
     $ProjectRoot = $ENV:APPVEYOR_BUILD_FOLDER
     Set-Location $ProjectRoot
+
+    $Verbose = @{}
+    if($env:APPVEYOR_REPO_BRANCH -and $env:APPVEYOR_REPO_BRANCH -notlike "master")
+    {
+        $Verbose.add("Verbose",$True)
+    }
    
 #Run a test with the current version of PowerShell, upload results
     if($Test)
@@ -25,7 +31,7 @@ param(
     
         Import-Module Pester
 
-        Invoke-Pester -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
+        Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
             Export-Clixml -Path "$ProjectRoot\PesterResults_PS$PSVersion`_$Timestamp.xml"
 
         (New-Object 'System.Net.WebClient').UploadFile( $Address, "$ProjectRoot\$TestFile" )
