@@ -1,4 +1,11 @@
-Import-Module -Force $PSScriptRoot\Invoke-Parallel.ps1
+#handle PS2
+if(-not $PSScriptRoot)
+{
+    $PSScriptRoot = Split-Path $MyInvocation.MyCommand.Path -Parent
+}
+
+$PSVersion = $PSVersionTable.PSVersion.Major
+Import-Module -Force $PSScriptRoot\..\Invoke-Parallel
 
 Describe 'Invoke-Parallel' {
     
