@@ -5,9 +5,9 @@ if(-not $PSScriptRoot)
 }
 
 $PSVersion = $PSVersionTable.PSVersion.Major
-Import-Module -Force $PSScriptRoot\..\Invoke-Parallel
+Import-Module $PSScriptRoot\..\Invoke-Parallel -Force
 
-Describe 'Invoke-Parallel' {
+Describe "Invoke-Parallel PS$PSVersion" {
     
     Context 'Strict mode' { 
 
