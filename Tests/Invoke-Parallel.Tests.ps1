@@ -35,19 +35,17 @@ Describe "Invoke-Parallel PS$PSVersion" {
 
         It 'should import variables with one letter name' {
             $a = "Hello"
-            $out = 0 | Invoke-Parallel @Verbose -ImportVariables -ScriptBlock {
+            0 | Invoke-Parallel @Verbose -ImportVariables -ScriptBlock {
                 $a
-            }
-            $out[0] | Should Be "Hello"
+            } | Should Be "Hello"
         }
 
         It 'should import all variables' {
             $a = "Hello"
             $longvar = "World!"
-            $out = 0 | Invoke-Parallel @Verbose -ImportVariables -ScriptBlock {
+            0 | Invoke-Parallel @Verbose -ImportVariables -ScriptBlock {
                 "$a $longvar"
-            }
-            $out[0] | Should Be "Hello World!"
+            } | Should Be "Hello World!"
         }
 
         It 'should not import variables when not specified' {

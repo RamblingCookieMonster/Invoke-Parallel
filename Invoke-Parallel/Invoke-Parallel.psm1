@@ -214,12 +214,23 @@
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
                 $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+                Write-Verbose "Excluding variables $( ($VariablesToExclude | sort ) -join ", ")"
 
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
-                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
+                # Scope 2 required now that we are in a module
+                $UserVariables = @( Get-Variable -scope 2 | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
                 Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
+
+                #Temporary verbose testing - I can't see variables declared in the pester tests?
+                Write-Verbose "Global = $((Get-Variable -Scope Global).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+                Write-Verbose "Local = $((Get-Variable -Scope Local).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+                Write-Verbose "Script = $((Get-Variable -Scope Script).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+                Write-Verbose "0 = $((Get-Variable -Scope 0).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+                Write-Verbose "1 = $((Get-Variable -Scope 1).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+                Write-Verbose "2 = $((Get-Variable -Scope 2).Name | Sort | Where { -not ($VariablesToExclude -contains $_) } | Out-String)"
+
             }
 
             if ($ImportModules) 
