@@ -83,6 +83,23 @@ Describe "Invoke-Parallel PS$PSVersion" {
             } | Should Be 5
         }
 
+        It 'should support $using in PowerShell 3 and later' {
+            $a = 4
+            if($PSVersionTable.PSVersion.Major -eq 2)
+            {
+                0 | Invoke-Parallel @Verbose -ScriptBlock {
+                    $using:a
+                } | Should Throw
+            }
+            elseif($PSVersionTable.PSVersion.Major -gt 2)
+            {
+                0 | Invoke-Parallel @Verbose -ScriptBlock {
+                    $using:a
+                } | Should Be 4
+            }
+
+        }
+
     }
 }
 
