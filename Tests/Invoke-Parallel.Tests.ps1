@@ -97,9 +97,7 @@ Describe "Invoke-Parallel PS$PSVersion" {
                     $using:a
                 } | Should Be 4
             }
-
         }
-
     }
 }
 
