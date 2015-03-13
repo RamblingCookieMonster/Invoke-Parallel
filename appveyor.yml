@@ -6,7 +6,7 @@ skip_commits:
   message: /updated readme.*/
 
 install:
-  - cinst pester
+  - cinst pester -y
 
 build: false
 

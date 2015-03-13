@@ -14,6 +14,8 @@
 
     .PARAMETER ScriptBlock
         Scriptblock to run against all computers.
+
+        You may use $Using:<Variable> language in PowerShell 3 and later.
         
             The parameter block is added for you, allowing behaviour similar to foreach-object:
                 Refer to the input object as $_.
@@ -123,17 +125,24 @@
 
         Add variables from the current session to the session state.  Without -ImportVariables $Test would not be accessible
 
+    .EXAMPLE
+        $test = 5
+        1..2 | Invoke-Parallel -ImportVariables {$_ * $Using:test}
+
+        Reference a variable from the current session with the $Using:<Variable> syntax.  Requires PowerShell 3 or later.
+
     .FUNCTIONALITY
         PowerShell Language
 
     .NOTES
-        Credit to Boe Prox 
+        Credit to Boe Prox for the base runspace code and $Using implementation
             http://learn-powershell.net/2012/05/10/speedy-network-information-query-using-powershell/
             http://gallery.technet.microsoft.com/scriptcenter/Speedy-Network-Information-5b1406fb#content
+            https://github.com/proxb/PoshRSJob/
 
         Credit to T Bryce Yehl for the Quiet and NoCloseOnTimeout implementations
 
-        Credit to Sergei Vorobev for the ImportModules and ImportVariables idea, and basis for implementation
+        Credit to Sergei Vorobev for the many ideas and contributions that have improved functionality, reliability, and ease of use
 
     .LINK
         https://github.com/RamblingCookieMonster/Invoke-Parallel
@@ -346,20 +355,81 @@
         
         #region Init
 
-            #Build the scriptblock depending on the parameter used
-            switch ($PSCmdlet.ParameterSetName){
+            if($PSCmdlet.ParameterSetName -eq 'ScriptFile')
+            {
+                $ScriptBlock = [scriptblock]::Create( $(Get-Content $ScriptFile | out-string) )
+            }
+            elseif($PSCmdlet.ParameterSetName -eq 'ScriptBlock')
+            {
+                #Start building parameter names for the param block
+                [string[]]$ParamsToAdd = '$_'
+                if( $PSBoundParameters.ContainsKey('Parameter') )
+                {
+                    $ParamsToAdd += '$Parameter'
+                }
+
+                $UsingVariableData = $Null
                 
-                'ScriptBlock' {
-                    $ScriptBlock = $ExecutionContext.InvokeCommand.NewScriptBlock("param(`$_, `$parameter)`r`n" + $Scriptblock.ToString())
+
+                # This code enables $Using support through the AST.
+                # This is entirely from  Boe Prox, and his https://github.com/proxb/PoshRSJob module; all credit to Boe!
+                
+                if($PSVersionTable.PSVersion.Major -gt 2)
+                {
+                    #Extract using references
+                    $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)    
+
+                    If ($UsingVariables)
+                    {
+                        $List = New-Object 'System.Collections.Generic.List`1[System.Management.Automation.Language.VariableExpressionAst]'
+                        ForEach ($Ast in $UsingVariables)
+                        {
+                            [void]$list.Add($Ast.SubExpression)
+                        }
+
+                        $UsingVar = $UsingVariables | Group Parent | ForEach {$_.Group | Select -First 1}
+        
+                        #Extract the name, value, and create replacements for each
+                        $UsingVariableData = ForEach ($Var in $UsingVar) {
+                            Try
+                            {
+                                $Value = Get-Variable -Name $Var.SubExpression.VariablePath.UserPath -ErrorAction Stop
+                                $NewName = ('$__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
+                                [pscustomobject]@{
+                                    Name = $Var.SubExpression.Extent.Text
+                                    Value = $Value.Value
+                                    NewName = $NewName
+                                    NewVarName = ('__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
+                                }
+                                $ParamsToAdd += $NewName
+                            }
+                            Catch
+                            {
+                                Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
+                            }
+                        }
+    
+                        $NewParams = $UsingVariableData.NewName -join ', '
+                        $Tuple = [Tuple]::Create($list, $NewParams)
+                        $bindingFlags = [Reflection.BindingFlags]"Default,NonPublic,Instance"
+                        $GetWithInputHandlingForInvokeCommandImpl = ($ScriptBlock.ast.gettype().GetMethod('GetWithInputHandlingForInvokeCommandImpl',$bindingFlags))
+        
+                        $StringScriptBlock = $GetWithInputHandlingForInvokeCommandImpl.Invoke($ScriptBlock.ast,@($Tuple))
+
+                        $ScriptBlock = [scriptblock]::Create($StringScriptBlock)
+
+                        Write-Verbose $StringScriptBlock
+                    }
                 }
                 
-                'ScriptFile' {
-                    $ScriptBlock = [scriptblock]::Create( $(Get-Content $ScriptFile | out-string) )
-                }
-                
-                Default {Throw "Must provide ScriptBlock or ScriptFile"; Break}
+                $ScriptBlock = $ExecutionContext.InvokeCommand.NewScriptBlock("param($($ParamsToAdd -Join ", "))`r`n" + $Scriptblock.ToString())
+            }
+            else
+            {
+                Throw "Must provide ScriptBlock or ScriptFile"; Break
             }
 
+            Write-Debug "`$ScriptBlock: $($ScriptBlock | Out-String)"
             Write-Verbose "Creating runspace pool and session states"
 
             #If specified, add variables and modules/snapins to session state
@@ -466,6 +536,15 @@
                     if ($parameter)
                     {
                         [void]$PowerShell.AddArgument($parameter)
+                    }
+
+                    # $Using support from Boe Prox
+                    if ($UsingVariableData)
+                    {
+                        Foreach($UsingVariable in $UsingVariableData) {
+                            Write-Verbose "Adding $($UsingVariable.Name) with value: $($UsingVariable.Value)"
+                            [void]$PowerShell.AddArgument($UsingVariable.Value)
+                        }
                     }
 
                     #Add the runspace into the powershell instance
