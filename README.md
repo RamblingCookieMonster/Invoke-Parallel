@@ -26,4 +26,4 @@ Would love contributors, suggestions, feedback, and other help!  Split this out 
 
 # Notes
 
-* Credit to Boe Prox for [the base code](http://learn-powershell.net/2012/05/10/speedy-network-information-query-using-powershell/) this uses.  Boe has a number of references on runspaces, including the [presentation and materials here](http://learn-powershell.net/2014/06/11/norcal-powershell-user-group-presentation-on-runspaces-is-available/); check them out!
+* Credit to Boe Prox for [the base code](http://learn-powershell.net/2012/05/10/speedy-network-information-query-using-powershell/) this uses.  Boe has a number of references on runspaces, including the [presentation and materials here](http://learn-powershell.net/2014/06/11/norcal-powershell-user-group-presentation-on-runspaces-is-available/) and the excellent [PoshRSJob module](https://github.com/proxb/PoshRSJob); check them out!
