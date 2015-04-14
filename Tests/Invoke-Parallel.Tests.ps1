@@ -84,9 +84,10 @@ Describe "Invoke-Parallel PS$PSVersion" {
         }
 
         It 'should support $using in PowerShell 3 and later' {
+            $a = 4
+
             if($PSVersionTable.PSVersion.Major -eq 2)
             {
-                $a = 4
                 0 | Invoke-Parallel @Verbose -ScriptBlock {
                     $using:a
                 } | Should Be $Null
@@ -98,10 +99,9 @@ Describe "Invoke-Parallel PS$PSVersion" {
                 } | Should Be 4
 
                 #Multiple $using statements
-                $x = 1
                 $Output = 0 | Invoke-Parallel @Verbose -ScriptBlock {
-                    $using:x
-                    "$using:x"
+                    $using:a
+                    "$using:a"
                 }
                 $Output.count | Should Be 2
             }
