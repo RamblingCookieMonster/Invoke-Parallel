@@ -387,28 +387,27 @@
                             [void]$list.Add($Ast.SubExpression)
                         }
 
-                        $UsingVar = $UsingVariables | Group Parent | ForEach {$_.Group | Select -First 1}
+                        $UsingVar = $UsingVariables | Group SubExpression | ForEach {$_.Group | Select -First 1}
         
                         #Extract the name, value, and create replacements for each
                         $UsingVariableData = ForEach ($Var in $UsingVar) {
                             Try
                             {
                                 $Value = Get-Variable -Name $Var.SubExpression.VariablePath.UserPath -ErrorAction Stop
-                                $NewName = ('$__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
                                 [pscustomobject]@{
                                     Name = $Var.SubExpression.Extent.Text
                                     Value = $Value.Value
-                                    NewName = $NewName
+                                    NewName = ('$__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
                                     NewVarName = ('__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
                                 }
-                                $ParamsToAdd += $NewName
                             }
                             Catch
                             {
                                 Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
                             }
                         }
-    
+                        $ParamsToAdd += $UsingVariableData | Select -ExpandProperty NewName -Unique
+
                         $NewParams = $UsingVariableData.NewName -join ', '
                         $Tuple = [Tuple]::Create($list, $NewParams)
                         $bindingFlags = [Reflection.BindingFlags]"Default,NonPublic,Instance"
