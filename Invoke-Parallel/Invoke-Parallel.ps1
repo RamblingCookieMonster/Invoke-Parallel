@@ -469,10 +469,10 @@
             $Script:runspaces = New-Object System.Collections.ArrayList        
         
             #If inputObject is bound get a total count and set bound to true
-            $global:__bound = $false
-            $allObjects = @()
-            if( $PSBoundParameters.ContainsKey("inputObject") ){
-                $global:__bound = $true
+            $bound = $PSBoundParameters.keys -contains "InputObject"
+            if(-not $bound)
+            {
+                [System.Collections.ArrayList]$allObjects = @()
             }
 
             #Set up log file if specified
@@ -500,11 +500,13 @@
     Process {
 
         #add piped objects to all objects or set all objects to bound input object parameter
-        if( -not $global:__bound ){
-            $allObjects += $inputObject
-        }
-        else{
+        if($bound)
+        {
             $allObjects = $InputObject
+        }
+        Else
+        {
+            [void]$allObjects.add( $InputObject )
         }
     }
 
@@ -592,7 +594,6 @@
             if (-not $quiet) {
 			    Write-Progress -Activity "Running Query" -Status "Starting threads" -Completed
 		    }
-
         }
         Finally
         {
