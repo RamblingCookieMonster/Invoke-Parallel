@@ -127,9 +127,9 @@
 
     .EXAMPLE
         $test = 5
-        1..2 | Invoke-Parallel -ImportVariables {$_ * $Using:test}
+        1..2 | Invoke-Parallel {$_ * $Using:test}
 
-        Reference a variable from the current session with the $Using:<Variable> syntax.  Requires PowerShell 3 or later.
+        Reference a variable from the current session with the $Using:<Variable> syntax.  Requires PowerShell 3 or later. Note that -ImportVariables parameter is no longer necessary.
 
     .FUNCTIONALITY
         PowerShell Language
