@@ -11,16 +11,16 @@ if($env:APPVEYOR_REPO_BRANCH -and $env:APPVEYOR_REPO_BRANCH -notlike "master")
 }
 
 $PSVersion = $PSVersionTable.PSVersion.Major
-Import-Module $PSScriptRoot\..\Invoke-Parallel\Invoke-Parallel.ps1 -Force
+Import-Module $PSScriptRoot\..\Functions\Invoke-Parallel.ps1 -Force
 
 Describe "Invoke-Parallel PS$PSVersion" {
-    
-    Context 'Strict mode' { 
+
+    Context 'Strict mode' {
 
         Set-StrictMode -Version latest
 
         It 'should out string' {
-            $out = (0..10) | Invoke-Parallel @Verbose -ScriptBlock { "a$_" } 
+            $out = (0..10) | Invoke-Parallel @Verbose -ScriptBlock { "a$_" }
             $out.Count | Should Be 11
             $out[5][0] | Should Be 'a'
         }
@@ -108,4 +108,3 @@ Describe "Invoke-Parallel PS$PSVersion" {
         }
     }
 }
-
