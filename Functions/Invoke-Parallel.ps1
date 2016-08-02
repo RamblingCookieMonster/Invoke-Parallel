@@ -6,7 +6,7 @@
     .DESCRIPTION
         Function to control parallel processing using runspaces
 
-            Note that each runspace will not have access to variables and commands loaded in your session or in other runspaces by default.  
+            Note that each runspace will not have access to variables and commands loaded in your session or in other runspaces by default.
             This behaviour can be changed with parameters.
 
     .PARAMETER ScriptFile
@@ -16,7 +16,7 @@
         Scriptblock to run against all computers.
 
         You may use $Using:<Variable> language in PowerShell 3 and later.
-        
+
             The parameter block is added for you, allowing behaviour similar to foreach-object:
                 Refer to the input object as $_.
                 Refer to the parameter parameter as $parameter
@@ -26,7 +26,7 @@
 
     .PARAMETER Parameter
         This object is passed to every script block.  You can use it to pass information to the script block; for example, the path to a logging folder
-        
+
             Reference this object as $parameter if using the scriptblock parameterset.
 
     .PARAMETER ImportVariables
@@ -52,7 +52,7 @@
 
     .PARAMETER MaxQueue
         Maximum number of powershell instances to add to runspace pool.  If this is higher than $throttle, $timeout will be inaccurate
-        
+
         If this is equal or less than throttle, there will be a performance impact
 
         The default value is $throttle times 3, if $runspaceTimeout is not specified
@@ -108,7 +108,7 @@
             ContentFile = "windows\system32\drivers\etc\hosts"
             Logfile = "C:\temp\log.txt"
         }
-    
+
         $computers | Invoke-Parallel -parameter $stuff {
             $contentFile = join-path "\\$_\c$" $parameter.contentfile
             Get-Content $contentFile |
@@ -148,7 +148,7 @@
         https://github.com/RamblingCookieMonster/Invoke-Parallel
     #>
     [cmdletbinding(DefaultParameterSetName='ScriptBlock')]
-    Param (   
+    Param (
         [Parameter(Mandatory=$false,position=0,ParameterSetName='ScriptBlock')]
             [System.Management.Automation.ScriptBlock]$ScriptBlock,
 
@@ -157,7 +157,7 @@
             $ScriptFile,
 
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
-        [Alias('CN','__Server','IPAddress','Server','ComputerName')]    
+        [Alias('CN','__Server','IPAddress','Server','ComputerName')]
             [PSObject]$InputObject,
 
             [PSObject]$Parameter,
@@ -181,9 +181,9 @@
 
 			[switch] $Quiet = $false
     )
-    
+
     Begin {
-                
+
         #No max queue specified?  Estimate one.
         #We use the script scope to resolve an odd PowerShell 2 issue where MaxQueue isn't seen later in the function
         if( -not $PSBoundParameters.ContainsKey('MaxQueue') )
@@ -210,7 +210,7 @@
                 #Get variables in this clean runspace
                 #Called last to get vars like $? into session
                 $Variables = Get-Variable | Select -ExpandProperty Name
-                
+
                 #Return a hashtable where we can access each.
                 @{
                     Variables = $Variables
@@ -218,31 +218,31 @@
                     Snapins = $Snapins
                 }
             }).invoke()[0]
-            
+
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
                 $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
                 Write-Verbose "Excluding variables $( ($VariablesToExclude | sort ) -join ", ")"
 
-                # we don't use 'Get-Variable -Exclude', because it uses regexps. 
-                # One of the veriables that we pass is '$?'. 
+                # we don't use 'Get-Variable -Exclude', because it uses regexps.
+                # One of the veriables that we pass is '$?'.
                 # There could be other variables with such problems.
                 # Scope 2 required if we move to a real module
-                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
+                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } )
                 Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
 
             }
 
-            if ($ImportModules) 
+            if ($ImportModules)
             {
                 $UserModules = @( Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path )
-                $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } ) 
+                $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } )
             }
         }
 
         #region functions
-            
+
             Function Get-RunspaceData {
                 [cmdletbinding()]
                 param( [switch]$Wait )
@@ -261,9 +261,9 @@
 							-PercentComplete $( Try { $script:completedCount / $totalCount * 100 } Catch {0} )
 					}
 
-                    #run through each runspace.           
+                    #run through each runspace.
                     Foreach($runspace in $runspaces) {
-                    
+
                         #get the duration - inaccurate
                         $currentdate = Get-Date
                         $runtime = $currentdate - $runspace.startTime
@@ -277,12 +277,12 @@
 
                         #If runspace completed, end invoke, dispose, recycle, counter++
                         If ($runspace.Runspace.isCompleted) {
-                            
+
                             $script:completedCount++
-                        
+
                             #check if there were errors
                             if($runspace.powershell.Streams.Error.Count -gt 0) {
-                                
+
                                 #set the logging info and move the file to completed
                                 $log.status = "CompletedWithErrors"
                                 Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
@@ -291,7 +291,7 @@
                                 }
                             }
                             else {
-                                
+
                                 #add logging details and cleanup
                                 $log.status = "Completed"
                                 Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
@@ -307,10 +307,10 @@
 
                         #If runtime exceeds max, dispose the runspace
                         ElseIf ( $runspaceTimeout -ne 0 -and $runtime.totalseconds -gt $runspaceTimeout) {
-                            
+
                             $script:completedCount++
                             $timedOutTasks = $true
-                            
+
 							#add logging details and cleanup
                             $log.status = "TimedOut"
                             Write-Verbose ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1]
@@ -323,8 +323,8 @@
                             $completedCount++
 
                         }
-                   
-                        #If runspace isn't null set more to true  
+
+                        #If runspace isn't null set more to true
                         ElseIf ($runspace.Runspace -ne $null ) {
                             $log = $null
                             $more = $true
@@ -347,12 +347,12 @@
 
                 #Loop again only if -wait parameter and there are more runspaces to process
                 } while ($more -and $PSBoundParameters['Wait'])
-                
+
             #End of runspace function
             }
 
         #endregion functions
-        
+
         #region Init
 
             if($PSCmdlet.ParameterSetName -eq 'ScriptFile')
@@ -369,15 +369,15 @@
                 }
 
                 $UsingVariableData = $Null
-                
+
 
                 # This code enables $Using support through the AST.
                 # This is entirely from  Boe Prox, and his https://github.com/proxb/PoshRSJob module; all credit to Boe!
-                
+
                 if($PSVersionTable.PSVersion.Major -gt 2)
                 {
                     #Extract using references
-                    $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)    
+                    $UsingVariables = $ScriptBlock.ast.FindAll({$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]},$True)
 
                     If ($UsingVariables)
                     {
@@ -388,7 +388,7 @@
                         }
 
                         $UsingVar = $UsingVariables | Group SubExpression | ForEach {$_.Group | Select -First 1}
-        
+
                         #Extract the name, value, and create replacements for each
                         $UsingVariableData = ForEach ($Var in $UsingVar) {
                             Try
@@ -412,7 +412,7 @@
                         $Tuple = [Tuple]::Create($list, $NewParams)
                         $bindingFlags = [Reflection.BindingFlags]"Default,NonPublic,Instance"
                         $GetWithInputHandlingForInvokeCommandImpl = ($ScriptBlock.ast.gettype().GetMethod('GetWithInputHandlingForInvokeCommandImpl',$bindingFlags))
-        
+
                         $StringScriptBlock = $GetWithInputHandlingForInvokeCommandImpl.Invoke($ScriptBlock.ast,@($Tuple))
 
                         $ScriptBlock = [scriptblock]::Create($StringScriptBlock)
@@ -420,7 +420,7 @@
                         Write-Verbose $StringScriptBlock
                     }
                 }
-                
+
                 $ScriptBlock = $ExecutionContext.InvokeCommand.NewScriptBlock("param($($ParamsToAdd -Join ", "))`r`n" + $Scriptblock.ToString())
             }
             else
@@ -463,11 +463,11 @@
 
             #Create runspace pool
             $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstate, $Host)
-            $runspacepool.Open() 
+            $runspacepool.Open()
 
             Write-Verbose "Creating empty collection to hold runspace jobs"
-            $Script:runspaces = New-Object System.Collections.ArrayList        
-        
+            $Script:runspaces = New-Object System.Collections.ArrayList
+
             #If inputObject is bound get a total count and set bound to true
             $bound = $PSBoundParameters.keys -contains "InputObject"
             if(-not $bound)
@@ -511,7 +511,7 @@
     }
 
     End {
-        
+
         #Use Try/Finally to catch Ctrl+C and clean up.
         Try
         {
@@ -521,12 +521,12 @@
             $startedCount = 0
 
             foreach($object in $allObjects){
-        
+
                 #region add scripts to runspace pool
-                    
+
                     #Create the powershell instance, set verbose if needed, supply the scriptblock and parameters
                     $powershell = [powershell]::Create()
-                    
+
                     if ($VerbosePreference -eq 'Continue')
                     {
                         [void]$PowerShell.AddScript({$VerbosePreference = 'Continue'})
@@ -550,13 +550,13 @@
 
                     #Add the runspace into the powershell instance
                     $powershell.RunspacePool = $runspacepool
-    
+
                     #Create a temporary collection for each runspace
                     $temp = "" | Select-Object PowerShell, StartTime, object, Runspace
                     $temp.PowerShell = $powershell
                     $temp.StartTime = Get-Date
                     $temp.object = $object
-    
+
                     #Save the handle output when calling BeginInvoke() that will be used later to end the runspace
                     $temp.Runspace = $powershell.BeginInvoke()
                     $startedCount++
@@ -564,7 +564,7 @@
                     #Add the temp tracking info to $runspaces collection
                     Write-Verbose ( "Adding {0} to collection at {1}" -f $temp.object, $temp.starttime.tostring() )
                     $runspaces.Add($temp) | Out-Null
-            
+
                     #loop through existing runspaces one time
                     Get-RunspaceData
 
@@ -578,16 +578,16 @@
                             Write-Verbose "$($runspaces.count) items running - exceeded $Script:MaxQueue limit."
                         }
                         $firstRun = $false
-                    
+
                         #run get-runspace data and sleep for a short while
                         Get-RunspaceData
                         Start-Sleep -Milliseconds $sleepTimer
-                    
+
                     }
 
                 #endregion add scripts to runspace pool
             }
-                     
+
             Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where {$_.Runspace -ne $Null}).Count) )
             Get-RunspaceData -wait
 
@@ -605,6 +605,6 @@
 
             #collect garbage
             [gc]::Collect()
-        }       
+        }
     }
 }
