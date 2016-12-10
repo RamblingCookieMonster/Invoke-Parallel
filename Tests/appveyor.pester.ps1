@@ -28,29 +28,20 @@ param(
     {
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
 
-
+    #If Powershell version 3 or higher, import pester module as usual.
         if($PSVersionTable.PSVersion.Major -gt 2)
         {
             Import-Module Pester
         }
+    #If Powershell version 2, look for the latest version of pester module and import with full file paths.
         elseif($PSVersionTable.PSVersion.Major -eq 2)
         {
             $PesterModule = gci "C:\Program Files\WindowsPowerShell\Modules\Pester" | ? { $_.PSIsContainer } | sort Name -desc | select -f 1 | Select -ExpandProperty FullName
-            #Write-Host "Pester module is in folder $PesterModule"
             $pesterPsd1 = Join-Path $PesterModule "\Pester.psd1"
-            #Write-host "Pester psd1 file is at:$pesterPsd1"
             $pesterPsm1 = Join-Path $PesterModule "\Pester.psm1"
-            #Write-host "Pester psm1 file is at:$pesterPsm1"
             Import-Module $pesterPsd1
             Import-Module $pesterPsm1
         }
-
-        #$pesterModuleTry2 = Get-Module pester | Select -ExpandProperty Path
-        #Write-Host "Pester moduletry2 is in folder $pesterModuleTry2"
-
-        #Import-Module $pesterModuleTry2 -ErrorAction SilentlyContinue
-        #Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psd1' 
-        #Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psm1'
 
         Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
             Export-Clixml -Path "$ProjectRoot\PesterResults_PS$PSVersion`_$Timestamp.xml"
