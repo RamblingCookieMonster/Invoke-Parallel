@@ -1,4 +1,4 @@
-[![Build status](https://ci.appveyor.com/api/projects/status/xsbki1rrxo2nh3fy/branch/master?svg=true)](https://ci.appveyor.com/project/RamblingCookieMonster/invoke-parallel/branch/master)
+[![Build status](https://ci.appveyor.com/api/projects/status/e2mfe1vf99maoe64?svg=true)](https://ci.appveyor.com/project/brow1920/invoke-parallel)
 
 Invoke-Parallel
 ==========
