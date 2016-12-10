@@ -29,7 +29,7 @@ param(
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
         #refreshenv
         #Get-Module -all
-        import-Module C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3 -Verbose
+        import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3' -Verbose
         #Import-Module -Name Pester -Verbose
 
         Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
