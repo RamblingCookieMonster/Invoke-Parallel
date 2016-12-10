@@ -28,16 +28,22 @@ param(
     {
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
 
-        $PesterModule = gci "C:\Program Files\WindowsPowerShell\Modules\Pester" | ? { $_.PSIsContainer } | sort Name -desc | select -f 1 | Select -ExpandProperty FullName
-        Write-Host "Pester module is in folder $PesterModule"
-        $pesterPsd1 = Join-Path $PesterModule "\Pester.psd1"
-        Write-host "Pester psd1 file is at:$pesterPsd1"
-        $pesterPsm1 = Join-Path $PesterModule "\Pester.psm1"
-        Write-host "Pester psm1 file is at:$pesterPsm1"
-        Import-Module $pesterPsd1 -Verbose
-        Import-Module $pesterPsm1 -Verbose
 
-
+        if($PSVersionTable.PSVersion.Major -gt 2)
+        {
+            Import-Module Pester
+        }
+        elseif($PSVersionTable.PSVersion.Major -eq 2)
+        {
+            $PesterModule = gci "C:\Program Files\WindowsPowerShell\Modules\Pester" | ? { $_.PSIsContainer } | sort Name -desc | select -f 1 | Select -ExpandProperty FullName
+            Write-Host "Pester module is in folder $PesterModule"
+            $pesterPsd1 = Join-Path $PesterModule "\Pester.psd1"
+            Write-host "Pester psd1 file is at:$pesterPsd1"
+            $pesterPsm1 = Join-Path $PesterModule "\Pester.psm1"
+            Write-host "Pester psm1 file is at:$pesterPsm1"
+            Import-Module $pesterPsd1 -Verbose
+            Import-Module $pesterPsm1 -Verbose
+        }
 
         #$pesterModuleTry2 = Get-Module pester | Select -ExpandProperty Path
         #Write-Host "Pester moduletry2 is in folder $pesterModuleTry2"
