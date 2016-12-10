@@ -28,10 +28,10 @@ param(
     {
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
 
-        $PesterModule = gci "C:\Program Files\WindowsPowerShell\Modules\Pester" | ? { $_.PSIsContainer } | sort Name -desc | select -f 1 | select FullName -ErrorAction SilentlyContinue
+        $PesterModule = gci "C:\Program Files\WindowsPowerShell\Modules\Pester" | ? { $_.PSIsContainer } | sort Name -desc | select -f 1 | Select -ExpandProperty FullName
         Write-Host "Pester module is in folder $PesterModule"
 
-        $pesterModuleTry2 = Get-Module pester | Select Path -ErrorAction SilentlyContinue
+        $pesterModuleTry2 = Get-Module pester | Select -ExpandProperty Path
         Write-Host "Pester moduletry2 is in folder $pesterModuleTry2"
 
         Import-Module $pesterModuleTry2 -ErrorAction SilentlyContinue
