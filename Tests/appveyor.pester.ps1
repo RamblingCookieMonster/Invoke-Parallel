@@ -29,8 +29,8 @@ param(
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
         #refreshenv
         #Get-Module -all
-       # Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psd1' -Verbose
-        #Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psm1' -Verbose
+        Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psd1' -Verbose
+        Import-Module 'C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psm1' -Verbose
 
         #Import-Module -Name Pester -Verbose
 
