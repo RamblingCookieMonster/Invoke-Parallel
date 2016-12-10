@@ -29,7 +29,8 @@ param(
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
         refreshenv
         Get-Module -all
-        Import-Module -Name Pester -Verbose
+        import-Module C:\Program Files\WindowsPowerShell\Modules\Pester\3.4.3\Pester.psm1 -Verbose
+        #Import-Module -Name Pester -Verbose
 
         Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
             Export-Clixml -Path "$ProjectRoot\PesterResults_PS$PSVersion`_$Timestamp.xml"
