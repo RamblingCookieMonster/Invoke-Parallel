@@ -27,7 +27,7 @@ param(
     if($Test)
     {
         "`n`tSTATUS: Testing with PowerShell $PSVersion`n"
-    
+        refreshenv
         Import-Module Pester
 
         Invoke-Pester @Verbose -Path "$ProjectRoot\Tests" -OutputFormat NUnitXml -OutputFile "$ProjectRoot\$TestFile" -PassThru |
