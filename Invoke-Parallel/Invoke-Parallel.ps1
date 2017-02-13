@@ -1,5 +1,7 @@
-﻿function Invoke-Parallel {
+function Invoke-Parallel {
     <#
+    Taken from https://github.com/RamblingCookieMonster/Invoke-Parallel/blob/master/Invoke-Parallel/Invoke-Parallel.ps1
+    
     .SYNOPSIS
         Function to control parallel processing using runspaces
 
@@ -63,6 +65,9 @@
 
 	.PARAMETER Quiet
 		Disable progress bar.
+        
+    .PARAMETER AppendLog
+        Append to existing log
 
     .EXAMPLE
         Each example uses Test-ForPacs.ps1 which includes the following code:
@@ -165,6 +170,7 @@
             [switch]$ImportVariables,
 
             [switch]$ImportModules,
+            [switch]$ImportFunctions,
 
             [int]$Throttle = 20,
 
@@ -178,7 +184,7 @@
 
         [validatescript({Test-Path (Split-Path $_ -parent)})]
             [string]$LogFile = "C:\temp\log.log",
-
+            [switch] $AppendLog = $false,
 			[switch] $Quiet = $false
     )
     
@@ -199,13 +205,14 @@
         Write-Verbose "Throttle: '$throttle' SleepTimer '$sleepTimer' runSpaceTimeout '$runspaceTimeout' maxQueue '$maxQueue' logFile '$logFile'"
 
         #If they want to import variables or modules, create a clean runspace, get loaded items, use those to exclude items
-        if ($ImportVariables -or $ImportModules)
+        if ($ImportVariables -or $ImportModules -or $ImportFunctions)
         {
             $StandardUserEnv = [powershell]::Create().addscript({
 
                 #Get modules and snapins in this clean runspace
                 $Modules = Get-Module | Select -ExpandProperty Name
                 $Snapins = Get-PSSnapin | Select -ExpandProperty Name
+                $Functions = Get-ChildItem function:\ | Select -ExpandProperty Name
 
                 #Get variables in this clean runspace
                 #Called last to get vars like $? into session
@@ -213,9 +220,10 @@
                 
                 #Return a hashtable where we can access each.
                 @{
-                    Variables = $Variables
-                    Modules = $Modules
-                    Snapins = $Snapins
+                    Variables   = $Variables
+                    Modules     = $Modules
+                    Snapins     = $Snapins
+                    Functions   = $Functions
                 }
             }).invoke()[0]
             
@@ -238,6 +246,9 @@
             {
                 $UserModules = @( Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path )
                 $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } ) 
+            }
+            if($ImportFunctions) {
+                $UserFunctions = @( Get-ChildItem function:\ | Where { $StandardUserEnv.Functions -notcontains $_.Name } )
             }
         }
 
@@ -439,7 +450,7 @@
                 {
                     foreach($Variable in $UserVariables)
                     {
-                        $sessionstate.Variables.Add( (New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
+                        $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList [string]$Variable.Name, [PSObject]$Variable.Value,$null) )
                     }
                 }
             }
@@ -460,6 +471,15 @@
                     }
                 }
             }
+            
+            if($ImportFunctions) {
+                if($UserFunctions.count -gt 0) {
+                    foreach ($FunctionDef in $UserFunctions) {
+                        $sessionstate.Commands.Add((New-Object System.Management.Automation.Runspaces.SessionStateFunctionEntry -ArgumentList $FunctionDef.Name,$FunctionDef.ScriptBlock))
+                    }
+                }   
+            }
+            
 
             #Create runspace pool
             $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstate, $Host)
@@ -476,7 +496,7 @@
             }
 
             #Set up log file if specified
-            if( $LogFile ){
+            if( $LogFile -and (-Not (Test-Path $LogFile) -or $AppendLog -eq $false)){
                 New-Item -ItemType file -path $logFile -force | Out-Null
                 ("" | Select Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
             }
@@ -589,6 +609,7 @@
             }
                      
             Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where {$_.Runspace -ne $Null}).Count) )
+
             Get-RunspaceData -wait
 
             if (-not $quiet) {
