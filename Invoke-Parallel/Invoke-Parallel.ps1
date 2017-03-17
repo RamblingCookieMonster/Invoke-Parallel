@@ -204,12 +204,12 @@
             $StandardUserEnv = [powershell]::Create().addscript({
 
                 #Get modules and snapins in this clean runspace
-                $Modules = Get-Module | Select -ExpandProperty Name
-                $Snapins = Get-PSSnapin | Select -ExpandProperty Name
+                $Modules = Get-Module | Select-Object -ExpandProperty Name
+                $Snapins = Get-PSSnapin | Select-Object -ExpandProperty Name
 
                 #Get variables in this clean runspace
                 #Called last to get vars like $? into session
-                $Variables = Get-Variable | Select -ExpandProperty Name
+                $Variables = Get-Variable | Select-Object -ExpandProperty Name
                 
                 #Return a hashtable where we can access each.
                 @{
@@ -222,22 +222,22 @@
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
-                $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
-                Write-Verbose "Excluding variables $( ($VariablesToExclude | sort ) -join ", ")"
+                $VariablesToExclude = @( (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+                Write-Verbose "Excluding variables $( ($VariablesToExclude | Sort-Object ) -join ", ")"
 
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
                 # Scope 2 required if we move to a real module
-                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
-                Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
+                $UserVariables = @( Get-Variable | Where-Object -FilterScript { -not ($VariablesToExclude -contains $_.Name) } ) 
+                Write-Verbose "Found variables to import: $( ($UserVariables | Select-Object -expandproperty Name | Sort-Object ) -join ", " | Out-String).`n"
 
             }
 
             if ($ImportModules) 
             {
-                $UserModules = @( Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path )
-                $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } ) 
+                $UserModules = @( Get-Module | Where-Object -FilterScript {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select-Object -ExpandProperty Path )
+                $UserSnapins = @( Get-PSSnapin | Select-Object -ExpandProperty Name | Where-Object -FilterScript {$StandardUserEnv.Snapins -notcontains $_ } ) 
             }
         }
 
@@ -270,7 +270,7 @@
                         $runMin = [math]::Round( $runtime.totalminutes ,2 )
 
                         #set up log object
-                        $log = "" | select Date, Action, Runtime, Status, Details
+                        $log = "" | Select-Object Date, Action, Runtime, Status, Details
                         $log.Action = "Removing:'$($runspace.object)'"
                         $log.Date = $currentdate
                         $log.Runtime = "$runMin minutes"
@@ -338,7 +338,7 @@
 
                     #Clean out unused runspace jobs
                     $temphash = $runspaces.clone()
-                    $temphash | Where { $_.runspace -eq $Null } | ForEach {
+                    $temphash | Where-Object -FilterScript { $_.runspace -eq $Null } | ForEach-Object {
                         $Runspaces.remove($_)
                     }
 
@@ -387,7 +387,7 @@
                             [void]$list.Add($Ast.SubExpression)
                         }
 
-                        $UsingVar = $UsingVariables | Group SubExpression | ForEach {$_.Group | Select -First 1}
+                        $UsingVar = $UsingVariables | Group-Object -Property SubExpression | ForEach-Object {$_.Group | Select-Object -First 1}
         
                         #Extract the name, value, and create replacements for each
                         $UsingVariableData = ForEach ($Var in $UsingVar) {
@@ -406,7 +406,7 @@
                                 Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
                             }
                         }
-                        $ParamsToAdd += $UsingVariableData | Select -ExpandProperty NewName -Unique
+                        $ParamsToAdd += $UsingVariableData | Select-Object -ExpandProperty NewName -Unique
 
                         $NewParams = $UsingVariableData.NewName -join ', '
                         $Tuple = [Tuple]::Create($list, $NewParams)
@@ -478,11 +478,11 @@
             #Set up log file if specified
             if( $LogFile ){
                 New-Item -ItemType file -path $logFile -force | Out-Null
-                ("" | Select Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
+                ("" | Select-Object -Property Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
             }
 
             #write initial log entry
-            $log = "" | Select Date, Action, Runtime, Status, Details
+            $log = "" | Select-Object -Property Date, Action, Runtime, Status, Details
                 $log.Date = Get-Date
                 $log.Action = "Batch processing started"
                 $log.Runtime = $null
@@ -588,7 +588,7 @@
                 #endregion add scripts to runspace pool
             }
                      
-            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where {$_.Runspace -ne $Null}).Count) )
+            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where-Object -FilterScript {$_.Runspace -ne $Null}).Count) )
             Get-RunspaceData -wait
 
             if (-not $quiet) {
