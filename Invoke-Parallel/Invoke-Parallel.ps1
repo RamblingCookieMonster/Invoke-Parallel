@@ -175,9 +175,10 @@
 			[switch]$NoCloseOnTimeout = $false,
 
             [int]$MaxQueue,
-
+        
+        [Parameter(Mandatory=$false)]
         [validatescript({Test-Path (Split-Path $_ -parent)})]
-            [string]$LogFile = "C:\temp\log.log",
+            [string]$LogFile,
 
 			[switch] $Quiet = $false
     )
