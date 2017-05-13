@@ -1,7 +1,5 @@
 function Invoke-Parallel {
     <#
-    Taken from https://github.com/RamblingCookieMonster/Invoke-Parallel/blob/master/Invoke-Parallel/Invoke-Parallel.ps1
-    
     .SYNOPSIS
         Function to control parallel processing using runspaces
 
@@ -62,12 +60,12 @@ function Invoke-Parallel {
 
     .PARAMETER LogFile
         Path to a file where we can log results, including run time for each thread, whether it completes, completes with errors, or times out.
-
-	.PARAMETER Quiet
-		Disable progress bar.
         
     .PARAMETER AppendLog
         Append to existing log
+
+	.PARAMETER Quiet
+		Disable progress bar
 
     .EXAMPLE
         Each example uses Test-ForPacs.ps1 which includes the following code:
@@ -78,9 +76,7 @@ function Invoke-Parallel {
                     Computer=$computer;
                     Available=1;
                     Kodak=$(
-                        if((test-path "\\$computer\c$\users\public\desktop\Kodak Direct View Pacs.url") -or (test-path "\\$computer\c$\documents and settings\all users
-
-        \desktop\Kodak Direct View Pacs.url") ){"1"}else{"0"}
+                        if((test-path "\\$computer\c$\users\public\desktop\Kodak Direct View Pacs.url") -or (test-path "\\$computer\c$\documents and settings\all users\desktop\Kodak Direct View Pacs.url") ){"1"}else{"0"}
                     )
                 }
             }
@@ -155,32 +151,31 @@ function Invoke-Parallel {
     [cmdletbinding(DefaultParameterSetName='ScriptBlock')]
     Param (   
         [Parameter(Mandatory=$false,position=0,ParameterSetName='ScriptBlock')]
-            [System.Management.Automation.ScriptBlock]$ScriptBlock,
+        [System.Management.Automation.ScriptBlock]$ScriptBlock,
 
         [Parameter(Mandatory=$false,ParameterSetName='ScriptFile')]
-        [ValidateScript({test-path $_ -pathtype leaf})]
-            $ScriptFile,
+        [ValidateScript({Test-Path $_ -pathtype leaf})]
+        $ScriptFile,
 
         [Parameter(Mandatory=$true,ValueFromPipeline=$true)]
         [Alias('CN','__Server','IPAddress','Server','ComputerName')]    
-            [PSObject]$InputObject,
+        [PSObject]$InputObject,
 
-            [PSObject]$Parameter,
+        [PSObject]$Parameter,
 
-            [switch]$ImportVariables,
+        [switch]$ImportVariables,
+        [switch]$ImportModules,
+        [switch]$ImportFunctions,
 
-            [switch]$ImportModules,
-            [switch]$ImportFunctions,
+        [int]$Throttle = 20,
 
-            [int]$Throttle = 20,
+        [int]$SleepTimer = 200,
 
-            [int]$SleepTimer = 200,
+        [int]$RunspaceTimeout = 0,
+        
+        [switch]$NoCloseOnTimeout = $false,
 
-            [int]$RunspaceTimeout = 0,
-
-			[switch]$NoCloseOnTimeout = $false,
-
-            [int]$MaxQueue,
+        [int]$MaxQueue,
         
         [validatescript({Test-Path (Split-Path $_ -parent)})]
         [switch] $AppendLog = $false,
@@ -210,9 +205,9 @@ function Invoke-Parallel {
             $StandardUserEnv = [powershell]::Create().addscript({
 
                 #Get modules, snapins, functions in this clean runspace
-                $Modules = Get-Module | Select -ExpandProperty Name
-                $Snapins = Get-PSSnapin | Select -ExpandProperty Name
-                $Functions = Get-ChildItem function:\ | Select -ExpandProperty Name
+                $Modules = Get-Module | Select-Object -ExpandProperty Name
+                $Snapins = Get-PSSnapin | Select-Object -ExpandProperty Name
+                $Functions = Get-ChildItem function:\ | Select-Object -ExpandProperty Name
 
                 #Get variables in this clean runspace
                 #Called last to get vars like $? into session
@@ -229,7 +224,7 @@ function Invoke-Parallel {
             
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
-                Function _temp {[cmdletbinding()] param() }
+                Function _temp {[cmdletbinding(SupportsShouldProcess=$True)] param() }
                 $VariablesToExclude = @( (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
                 Write-Verbose "Excluding variables $( ($VariablesToExclude | Sort-Object ) -join ", ")"
 
@@ -446,7 +441,7 @@ function Invoke-Parallel {
                 {
                     foreach($Variable in $UserVariables)
                     {
-                        $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList [string]$Variable.Name, [PSObject]$Variable.Value,$null) )
+                        $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
                     }
                 }
             }
@@ -491,8 +486,8 @@ function Invoke-Parallel {
             }
 
             #Set up log file if specified
-            if( $LogFile -and (-Not (Test-Path $LogFile) -or $AppendLog -eq $false)){
-                New-Item -ItemType file -path $logFile -force | Out-Null
+            if( $LogFile -and (-not (Test-Path $LogFile) -or $AppendLog -eq $false)){
+                New-Item -ItemType file -Path $logFile -Force | Out-Null
                 ("" | Select-Object -Property Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
             }
 
