@@ -1,7 +1,7 @@
 # See http://www.appveyor.com/docs/appveyor-yml for many more options
 
 # Skip on updates to the readme.
-# We can force this by adding [skip ci] or [ci skip] anywhere in commit message
+# We can force this by adding [skip ci] or [ci skip] anywhere in commit message 
 skip_commits:
   message: /updated readme.*/
 
@@ -11,6 +11,8 @@ install:
 build: false
 
 test_script:
+# temporary to get build process working again... install pester and add to psmodulepath
+  - ps: . .\build.ps1
 # Test with native PS version
   - ps: . .\Tests\appveyor.pester.ps1 -Test
 # Test with PS version 2

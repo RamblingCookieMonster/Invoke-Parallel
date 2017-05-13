@@ -181,15 +181,15 @@ function Invoke-Parallel {
 			[switch]$NoCloseOnTimeout = $false,
 
             [int]$MaxQueue,
-
+        
         [validatescript({Test-Path (Split-Path $_ -parent)})]
-            [string]$LogFile = "C:\temp\log.log",
-            [switch] $AppendLog = $false,
-			[switch] $Quiet = $false
+        [switch] $AppendLog = $false,
+
+        [string]$LogFile,
+
+        [switch] $Quiet = $false
     )
-    
     Begin {
-                
         #No max queue specified?  Estimate one.
         #We use the script scope to resolve an odd PowerShell 2 issue where MaxQueue isn't seen later in the function
         if( -not $PSBoundParameters.ContainsKey('MaxQueue') )
@@ -209,14 +209,14 @@ function Invoke-Parallel {
         {
             $StandardUserEnv = [powershell]::Create().addscript({
 
-                #Get modules and snapins in this clean runspace
+                #Get modules, snapins, functions in this clean runspace
                 $Modules = Get-Module | Select -ExpandProperty Name
                 $Snapins = Get-PSSnapin | Select -ExpandProperty Name
                 $Functions = Get-ChildItem function:\ | Select -ExpandProperty Name
 
                 #Get variables in this clean runspace
                 #Called last to get vars like $? into session
-                $Variables = Get-Variable | Select -ExpandProperty Name
+                $Variables = Get-Variable | Select-Object -ExpandProperty Name
                 
                 #Return a hashtable where we can access each.
                 @{
@@ -230,22 +230,21 @@ function Invoke-Parallel {
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
                 Function _temp {[cmdletbinding()] param() }
-                $VariablesToExclude = @( (Get-Command _temp | Select -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
-                Write-Verbose "Excluding variables $( ($VariablesToExclude | sort ) -join ", ")"
+                $VariablesToExclude = @( (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
+                Write-Verbose "Excluding variables $( ($VariablesToExclude | Sort-Object ) -join ", ")"
 
                 # we don't use 'Get-Variable -Exclude', because it uses regexps. 
                 # One of the veriables that we pass is '$?'. 
                 # There could be other variables with such problems.
                 # Scope 2 required if we move to a real module
-                $UserVariables = @( Get-Variable | Where { -not ($VariablesToExclude -contains $_.Name) } ) 
-                Write-Verbose "Found variables to import: $( ($UserVariables | Select -expandproperty Name | Sort ) -join ", " | Out-String).`n"
-
+                $UserVariables = @( Get-Variable | Where-Object { -not ($VariablesToExclude -contains $_.Name) } ) 
+                Write-Verbose "Found variables to import: $( ($UserVariables | Select-Object -expandproperty Name | Sort-Object ) -join ", " | Out-String).`n"
             }
 
             if ($ImportModules) 
             {
-                $UserModules = @( Get-Module | Where {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select -ExpandProperty Path )
-                $UserSnapins = @( Get-PSSnapin | Select -ExpandProperty Name | Where {$StandardUserEnv.Snapins -notcontains $_ } ) 
+                $UserModules = @( Get-Module | Where-Object {$StandardUserEnv.Modules -notcontains $_.Name -and (Test-Path $_.Path -ErrorAction SilentlyContinue)} | Select-Object -ExpandProperty Path )
+                $UserSnapins = @( Get-PSSnapin | Select-Object -ExpandProperty Name | Where-Object {$StandardUserEnv.Snapins -notcontains $_ } ) 
             }
             if($ImportFunctions) {
                 $UserFunctions = @( Get-ChildItem function:\ | Where { $StandardUserEnv.Functions -notcontains $_.Name } )
@@ -253,7 +252,6 @@ function Invoke-Parallel {
         }
 
         #region functions
-            
             Function Get-RunspaceData {
                 [cmdletbinding()]
                 param( [switch]$Wait )
@@ -281,7 +279,7 @@ function Invoke-Parallel {
                         $runMin = [math]::Round( $runtime.totalminutes ,2 )
 
                         #set up log object
-                        $log = "" | select Date, Action, Runtime, Status, Details
+                        $log = "" | Select-Object Date, Action, Runtime, Status, Details
                         $log.Action = "Removing:'$($runspace.object)'"
                         $log.Date = $currentdate
                         $log.Runtime = "$runMin minutes"
@@ -349,7 +347,7 @@ function Invoke-Parallel {
 
                     #Clean out unused runspace jobs
                     $temphash = $runspaces.clone()
-                    $temphash | Where { $_.runspace -eq $Null } | ForEach {
+                    $temphash | Where-Object { $_.runspace -eq $Null } | ForEach-Object {
                         $Runspaces.remove($_)
                     }
 
@@ -361,7 +359,6 @@ function Invoke-Parallel {
                 
             #End of runspace function
             }
-
         #endregion functions
         
         #region Init
@@ -380,7 +377,6 @@ function Invoke-Parallel {
                 }
 
                 $UsingVariableData = $Null
-                
 
                 # This code enables $Using support through the AST.
                 # This is entirely from  Boe Prox, and his https://github.com/proxb/PoshRSJob module; all credit to Boe!
@@ -398,7 +394,7 @@ function Invoke-Parallel {
                             [void]$list.Add($Ast.SubExpression)
                         }
 
-                        $UsingVar = $UsingVariables | Group SubExpression | ForEach {$_.Group | Select -First 1}
+                        $UsingVar = $UsingVariables | Group-Object -Property SubExpression | ForEach-Object {$_.Group | Select-Object -First 1}
         
                         #Extract the name, value, and create replacements for each
                         $UsingVariableData = ForEach ($Var in $UsingVar) {
@@ -417,7 +413,7 @@ function Invoke-Parallel {
                                 Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
                             }
                         }
-                        $ParamsToAdd += $UsingVariableData | Select -ExpandProperty NewName -Unique
+                        $ParamsToAdd += $UsingVariableData | Select-Object -ExpandProperty NewName -Unique
 
                         $NewParams = $UsingVariableData.NewName -join ', '
                         $Tuple = [Tuple]::Create($list, $NewParams)
@@ -480,7 +476,6 @@ function Invoke-Parallel {
                 }   
             }
             
-
             #Create runspace pool
             $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstate, $Host)
             $runspacepool.Open() 
@@ -498,11 +493,11 @@ function Invoke-Parallel {
             #Set up log file if specified
             if( $LogFile -and (-Not (Test-Path $LogFile) -or $AppendLog -eq $false)){
                 New-Item -ItemType file -path $logFile -force | Out-Null
-                ("" | Select Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
+                ("" | Select-Object -Property Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
             }
 
             #write initial log entry
-            $log = "" | Select Date, Action, Runtime, Status, Details
+            $log = "" | Select-Object -Property Date, Action, Runtime, Status, Details
                 $log.Date = Get-Date
                 $log.Action = "Batch processing started"
                 $log.Runtime = $null
@@ -518,7 +513,6 @@ function Invoke-Parallel {
     }
 
     Process {
-
         #add piped objects to all objects or set all objects to bound input object parameter
         if($bound)
         {
@@ -531,7 +525,6 @@ function Invoke-Parallel {
     }
 
     End {
-        
         #Use Try/Finally to catch Ctrl+C and clean up.
         Try
         {
@@ -607,11 +600,9 @@ function Invoke-Parallel {
 
                 #endregion add scripts to runspace pool
             }
-                     
-            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where {$_.Runspace -ne $Null}).Count) )
+            Write-Verbose ( "Finish processing the remaining runspace jobs: {0}" -f ( @($runspaces | Where-Object {$_.Runspace -ne $Null}).Count) )
 
             Get-RunspaceData -wait
-
             if (-not $quiet) {
 			    Write-Progress -Activity "Running Query" -Status "Starting threads" -Completed
 		    }
