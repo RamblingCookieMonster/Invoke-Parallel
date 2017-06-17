@@ -231,7 +231,7 @@ function Invoke-Parallel {
                 $UserSnapins = @( Get-PSSnapin | Select-Object -ExpandProperty Name | Where-Object {$StandardUserEnv.Snapins -notcontains $_ } )
             }
             if($ImportFunctions) {
-                $UserFunctions = @( Get-ChildItem function:\ | Where { $StandardUserEnv.Functions -notcontains $_.Name } )
+                $UserFunctions = @( Get-ChildItem function:\ | Where-Object { $StandardUserEnv.Functions -notcontains $_.Name } )
             }
         }
 
