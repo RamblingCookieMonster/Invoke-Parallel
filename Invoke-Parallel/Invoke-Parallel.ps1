@@ -212,7 +212,7 @@ function Invoke-Parallel {
                     Snapins     = $Snapins
                     Functions   = $Functions
                 }
-            }).invoke()[0]
+            },$true).invoke()[0]
 
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
