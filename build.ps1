@@ -1,5 +1,5 @@
-﻿Install-Module PSDepend -Force
-Invoke-PSDepend -Force -verbose
+﻿Install-Module -Name PSDepend -Force
+Invoke-PSDepend -Force -Verbose
 
 # For PS2, after installing with PS5.
-Move-Item C:\temp\pester\*\* -Destination C:\temp\pester -force
+Move-Item -Path C:\temp\pester\*\* -Destination C:\temp\pester -Force

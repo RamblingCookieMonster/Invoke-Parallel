@@ -17,7 +17,7 @@ function Invoke-Parallel {
 
         You may use $Using:<Variable> language in PowerShell 3 and later.
 
-            The parameter block is added for you, allowing behaviour similar to foreach-object:
+            The parameter block is added for you, allowing behaviour similar to ForEach-Object:
                 Refer to the input object as $_.
                 Refer to the parameter parameter as $parameter
 
@@ -69,29 +69,30 @@ function Invoke-Parallel {
 
     .EXAMPLE
         Each example uses Test-ForPacs.ps1 which includes the following code:
-            param($computer)
+            param ($computer)
 
-            if(test-connection $computer -count 1 -quiet -BufferSize 16){
-                $object = [pscustomobject] @{
-                    Computer=$computer;
-                    Available=1;
-                    Kodak=$(
-                        if((test-path "\\$computer\c$\users\public\desktop\Kodak Direct View Pacs.url") -or (test-path "\\$computer\c$\documents and settings\all users\desktop\Kodak Direct View Pacs.url") ){"1"}else{"0"}
+            if (Test-Connection -ComputerName $computer -Count 1 -Quiet -BufferSize 16){
+                $object = [PSCustomObject] @{
+                    Computer  = $computer;
+                    Available = 1;
+                    Kodak     = $(
+                        if ((Test-Path -Path "\\$computer\c$\users\public\desktop\Kodak Direct View Pacs.url") -or (Test-Path -Path "\\$computer\c$\documents and settings\all users\desktop\Kodak Direct View Pacs.url") ) {"1"}
+                        else {"0"}
                     )
                 }
             }
             else{
-                $object = [pscustomobject] @{
-                    Computer=$computer;
-                    Available=0;
-                    Kodak="NA"
+                $object = [PSCustomObject] @{
+                    Computer  = $computer;
+                    Available = 0;
+                    Kodak     = "NA"
                 }
             }
 
             $object
 
     .EXAMPLE
-        Invoke-Parallel -scriptfile C:\public\Test-ForPacs.ps1 -inputobject $(get-content C:\pcs.txt) -runspaceTimeout 10 -throttle 10
+        Invoke-Parallel -ScriptFile C:\public\Test-ForPacs.ps1 -InputObject $(get-content C:\pcs.txt) -RunspaceTimeout 10 -Throttle 10
 
             Pulls list of PCs from C:\pcs.txt,
             Runs Test-ForPacs against each
@@ -99,38 +100,38 @@ function Invoke-Parallel {
             Only run 10 threads at a time
 
     .EXAMPLE
-        Invoke-Parallel -scriptfile C:\public\Test-ForPacs.ps1 -inputobject c-is-ts-91, c-is-ts-95
+        Invoke-Parallel -ScriptFile C:\public\Test-ForPacs.ps1 -InputObject c-is-ts-91, c-is-ts-95
 
             Runs against c-is-ts-91, c-is-ts-95 (-computername)
             Runs Test-ForPacs against each
 
     .EXAMPLE
-        $stuff = [pscustomobject] @{
+        $stuff = [PSCustomObject] @{
             ContentFile = "windows\system32\drivers\etc\hosts"
-            Logfile = "C:\temp\log.txt"
+            Logfile     = "C:\temp\log.txt"
         }
 
         $computers | Invoke-Parallel -parameter $stuff {
-            $contentFile = join-path "\\$_\c$" $parameter.contentfile
+            $contentFile = Join-Path -Path "\\$_\c$" $parameter.contentfile
             Get-Content $contentFile |
-                set-content $parameter.logfile
+                Set-Content -Value $parameter.logfile
         }
 
-        This example uses the parameter argument.  This parameter is a single object.  To pass multiple items into the script block, we create a custom object (using a PowerShell v3 language) with properties we want to pass in.
+        This example uses the parameter argument. This parameter is a single object. To pass multiple items into the script block, we create a custom object (using a PowerShell v3 language) with properties we want to pass in.
 
-        Inside the script block, $parameter is used to reference this parameter object.  This example sets a content file, gets content from that file, and sets it to a predefined log file.
+        Inside the script block, $parameter is used to reference this parameter object. This example sets a content file, gets content from that file, and sets it to a predefined log file.
 
     .EXAMPLE
         $test = 5
-        1..2 | Invoke-Parallel -ImportVariables {$_ * $test}
+        1..2 | Invoke-Parallel -ImportVariables { $_ * $test }
 
-        Add variables from the current session to the session state.  Without -ImportVariables $Test would not be accessible
+        Add variables from the current session to the session state. Without -ImportVariables $Test would not be accessible
 
     .EXAMPLE
         $test = 5
         1..2 | Invoke-Parallel {$_ * $Using:test}
 
-        Reference a variable from the current session with the $Using:<Variable> syntax.  Requires PowerShell 3 or later. Note that -ImportVariables parameter is no longer necessary.
+        Reference a variable from the current session with the $Using:<Variable> syntax. Requires PowerShell 3 or later. Note that -ImportVariables parameter is no longer necessary.
 
     .FUNCTIONALITY
         PowerShell Language
@@ -148,13 +149,13 @@ function Invoke-Parallel {
     .LINK
         https://github.com/RamblingCookieMonster/Invoke-Parallel
     #>
-    [cmdletbinding(DefaultParameterSetName = 'ScriptBlock')]
+    [CmdletBinding(DefaultParameterSetName = 'ScriptBlock')]
     Param (
         [Parameter(Mandatory = $false, position = 0, ParameterSetName = 'ScriptBlock')]
         [System.Management.Automation.ScriptBlock]$ScriptBlock,
 
         [Parameter(Mandatory = $false, ParameterSetName = 'ScriptFile')]
-        [ValidateScript( {Test-Path $_ -pathtype leaf})]
+        [ValidateScript( { Test-Path -Path $_ -PathType Leaf})]
         $ScriptFile,
 
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
@@ -173,7 +174,7 @@ function Invoke-Parallel {
         [switch]$NoCloseOnTimeout = $false,
         [int]$MaxQueue,
 
-        [validatescript( {Test-Path (Split-Path $_ -parent)})]
+        [ValidateScript( {Test-Path -Path (Split-Path -Path $_ -Parent)})]
         [switch] $AppendLog = $false,
         [string]$LogFile,
 
@@ -199,7 +200,7 @@ function Invoke-Parallel {
                     #Get modules, snapins, functions in this clean runspace
                     $Modules = Get-Module | Select-Object -ExpandProperty Name
                     $Snapins = Get-PSSnapin | Select-Object -ExpandProperty Name
-                    $Functions = Get-ChildItem function:\ | Select-Object -ExpandProperty Name
+                    $Functions = Get-ChildItem -Path function:\ | Select-Object -ExpandProperty Name
 
                     #Get variables in this clean runspace
                     #Called last to get vars like $? into session
@@ -216,7 +217,7 @@ function Invoke-Parallel {
 
             if ($ImportVariables) {
                 #Exclude common parameters, bound parameters, and automatic variables
-                Function _temp {[cmdletbinding(SupportsShouldProcess = $True)] param() }
+                Function _temp {[CmdletBinding(SupportsShouldProcess = $True)] param () }
                 $VariablesToExclude = @( (Get-Command _temp | Select-Object -ExpandProperty parameters).Keys + $PSBoundParameters.Keys + $StandardUserEnv.Variables )
                 Write-Verbose "Excluding variables $( ($VariablesToExclude | Sort-Object ) -join ", ")"
 
@@ -232,14 +233,14 @@ function Invoke-Parallel {
                 $UserSnapins = @( Get-PSSnapin | Select-Object -ExpandProperty Name | Where-Object {$StandardUserEnv.Snapins -notcontains $_ } )
             }
             if ($ImportFunctions) {
-                $UserFunctions = @( Get-ChildItem function:\ | Where-Object { $StandardUserEnv.Functions -notcontains $_.Name } )
+                $UserFunctions = @( Get-ChildItem -Path function:\ | Where-Object { $StandardUserEnv.Functions -notcontains $_.Name } )
             }
         }
 
         #region functions
         Function Get-RunspaceData {
             [cmdletbinding()]
-            param( [switch]$Wait )
+            param ( [switch]$Wait )
             #loop through runspaces
             #if $wait is specified, keep looping until all complete
             Do {
@@ -328,140 +329,138 @@ function Invoke-Parallel {
                     $Runspaces.remove($_)
                 }
 
-            #sleep for a bit if we will loop again
-            if ($PSBoundParameters['Wait']) { Start-Sleep -milliseconds $SleepTimer }
+                #sleep for a bit if we will loop again
+                if ($PSBoundParameters['Wait']) { Start-Sleep -milliseconds $SleepTimer }
 
-            #Loop again only if -wait parameter and there are more runspaces to process
-        } while ($more -and $PSBoundParameters['Wait'])
-
-        #End of runspace function
-    }
-    #endregion functions
-
-    #region Init
-
-    if ($PSCmdlet.ParameterSetName -eq 'ScriptFile') {
-        $ScriptBlock = [scriptblock]::Create( $(Get-Content $ScriptFile | Out-String) )
-    }
-    elseif ($PSCmdlet.ParameterSetName -eq 'ScriptBlock') {
-        #Start building parameter names for the param block
-        [string[]]$ParamsToAdd = '$_'
-        if ( $PSBoundParameters.ContainsKey('Parameter') ) {
-            $ParamsToAdd += '$Parameter'
+                #Loop again only if -wait parameter and there are more runspaces to process
+            } while ($more -and $PSBoundParameters['Wait'])
         }
+        #endregion functions
 
-        $UsingVariableData = $Null
+        #region Init
 
-        # This code enables $Using support through the AST.
-        # This is entirely from  Boe Prox, and his https://github.com/proxb/PoshRSJob module; all credit to Boe!
+        if ($PSCmdlet.ParameterSetName -eq 'ScriptFile') {
+            $ScriptBlock = [scriptblock]::Create( $(Get-Content -Path $ScriptFile | Out-String) )
+        }
+        elseif ($PSCmdlet.ParameterSetName -eq 'ScriptBlock') {
+            #Start building parameter names for the param block
+            [string[]]$ParamsToAdd = '$_'
+            if ( $PSBoundParameters.ContainsKey('Parameter') ) {
+                $ParamsToAdd += '$Parameter'
+            }
 
-        if ($PSVersionTable.PSVersion.Major -gt 2) {
-            #Extract using references
-            $UsingVariables = $ScriptBlock.ast.FindAll( {$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]}, $True)
+            $UsingVariableData = $Null
 
-            If ($UsingVariables) {
-                $List = New-Object 'System.Collections.Generic.List`1[System.Management.Automation.Language.VariableExpressionAst]'
-                foreach ($Ast in $UsingVariables) {
-                    [void]$list.Add($Ast.SubExpression)
-                }
+            # This code enables $Using support through the AST.
+            # This is entirely from  Boe Prox, and his https://github.com/proxb/PoshRSJob module; all credit to Boe!
 
-                $UsingVar = $UsingVariables | Group-Object -Property SubExpression | ForEach-Object {$_.Group | Select-Object -First 1}
+            if ($PSVersionTable.PSVersion.Major -gt 2) {
+                #Extract using references
+                $UsingVariables = $ScriptBlock.ast.FindAll( {$args[0] -is [System.Management.Automation.Language.UsingExpressionAst]}, $True)
 
-                #Extract the name, value, and create replacements for each
-                $UsingVariableData = foreach ($Var in $UsingVar) {
-                    try {
-                        $Value = Get-Variable -Name $Var.SubExpression.VariablePath.UserPath -ErrorAction Stop
-                        [pscustomobject]@{
-                            Name       = $Var.SubExpression.Extent.Text
-                            Value      = $Value.Value
-                            NewName    = ('$__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
-                            NewVarName = ('__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
+                If ($UsingVariables) {
+                    $List = New-Object -TypeName 'System.Collections.Generic.List`1[System.Management.Automation.Language.VariableExpressionAst]'
+                    foreach ($Ast in $UsingVariables) {
+                        [void]$list.Add($Ast.SubExpression)
+                    }
+
+                    $UsingVar = $UsingVariables | Group-Object -Property SubExpression | ForEach-Object {$_.Group | Select-Object -First 1}
+
+                    #Extract the name, value, and create replacements for each
+                    $UsingVariableData = foreach ($Var in $UsingVar) {
+                        try {
+                            $Value = Get-Variable -Name $Var.SubExpression.VariablePath.UserPath -ErrorAction Stop
+                            [PSCustomObject]@{
+                                Name       = $Var.SubExpression.Extent.Text
+                                Value      = $Value.Value
+                                NewName    = ('$__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
+                                NewVarName = ('__using_{0}' -f $Var.SubExpression.VariablePath.UserPath)
+                            }
+                        }
+                        catch {
+                            Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
                         }
                     }
-                    catch {
-                        Write-Error "$($Var.SubExpression.Extent.Text) is not a valid Using: variable!"
-                    }
+                    $ParamsToAdd += $UsingVariableData | Select-Object -ExpandProperty NewName -Unique
+
+                    $NewParams = $UsingVariableData.NewName -join ', '
+                    $Tuple = [Tuple]::Create($list, $NewParams)
+                    $bindingFlags = [Reflection.BindingFlags]"Default,NonPublic,Instance"
+                    $GetWithInputHandlingForInvokeCommandImpl = ($ScriptBlock.ast.gettype().GetMethod('GetWithInputHandlingForInvokeCommandImpl', $bindingFlags))
+
+                    $StringScriptBlock = $GetWithInputHandlingForInvokeCommandImpl.Invoke($ScriptBlock.ast, @($Tuple))
+
+                    $ScriptBlock = [scriptblock]::Create($StringScriptBlock)
+
+                    Write-Verbose $StringScriptBlock
                 }
-                $ParamsToAdd += $UsingVariableData | Select-Object -ExpandProperty NewName -Unique
+            }
 
-                $NewParams = $UsingVariableData.NewName -join ', '
-                $Tuple = [Tuple]::Create($list, $NewParams)
-                $bindingFlags = [Reflection.BindingFlags]"Default,NonPublic,Instance"
-                $GetWithInputHandlingForInvokeCommandImpl = ($ScriptBlock.ast.gettype().GetMethod('GetWithInputHandlingForInvokeCommandImpl', $bindingFlags))
+            $ScriptBlock = $ExecutionContext.InvokeCommand.NewScriptBlock("param($($ParamsToAdd -Join ", "))`r`n" + $Scriptblock.ToString())
+        }
+        else {
+            Throw "Must provide ScriptBlock or ScriptFile"; Break
+        }
 
-                $StringScriptBlock = $GetWithInputHandlingForInvokeCommandImpl.Invoke($ScriptBlock.ast, @($Tuple))
+        Write-Debug "`$ScriptBlock: $($ScriptBlock | Out-String)"
+        Write-Verbose "Creating runspace pool and session states"
 
-                $ScriptBlock = [scriptblock]::Create($StringScriptBlock)
-
-                Write-Verbose $StringScriptBlock
+        #If specified, add variables and modules/snapins to session state
+        $sessionstate = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+        if ($ImportVariables -and $UserVariables.count -gt 0) {
+            foreach ($Variable in $UserVariables) {
+                $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
+            }
+        }
+        if ($ImportModules) {
+            if ($UserModules.count -gt 0) {
+                foreach ($ModulePath in $UserModules) {
+                    $sessionstate.ImportPSModule($ModulePath)
+                }
+            }
+            if ($UserSnapins.count -gt 0) {
+                foreach ($PSSnapin in $UserSnapins) {
+                    [void]$sessionstate.ImportPSSnapIn($PSSnapin, [ref]$null)
+                }
+            }
+        }
+        if ($ImportFunctions -and $UserFunctions.count -gt 0) {
+            foreach ($FunctionDef in $UserFunctions) {
+                $sessionstate.Commands.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateFunctionEntry -ArgumentList $FunctionDef.Name, $FunctionDef.ScriptBlock))
             }
         }
 
-        $ScriptBlock = $ExecutionContext.InvokeCommand.NewScriptBlock("param($($ParamsToAdd -Join ", "))`r`n" + $Scriptblock.ToString())
-    }
-    else {
-        Throw "Must provide ScriptBlock or ScriptFile"; Break
-    }
+        #Create runspace pool
+        $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstate, $Host)
+        $runspacepool.Open()
 
-    Write-Debug "`$ScriptBlock: $($ScriptBlock | Out-String)"
-    Write-Verbose "Creating runspace pool and session states"
+        Write-Verbose "Creating empty collection to hold runspace jobs"
+        $Script:runspaces = New-Object -TypeName System.Collections.ArrayList
 
-    #If specified, add variables and modules/snapins to session state
-    $sessionstate = [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
-    if ($ImportVariables -and $UserVariables.count -gt 0) {
-        foreach ($Variable in $UserVariables) {
-            $sessionstate.Variables.Add((New-Object -TypeName System.Management.Automation.Runspaces.SessionStateVariableEntry -ArgumentList $Variable.Name, $Variable.Value, $null) )
+        #If inputObject is bound get a total count and set bound to true
+        $bound = $PSBoundParameters.keys -contains "InputObject"
+        if (-not $bound) {
+            [System.Collections.ArrayList]$allObjects = @()
         }
-    }
-    if ($ImportModules) {
-        if ($UserModules.count -gt 0) {
-            foreach ($ModulePath in $UserModules) {
-                $sessionstate.ImportPSModule($ModulePath)
-            }
+
+        #Set up log file if specified
+        if ( $LogFile -and (-not (Test-Path -Path $LogFile) -or $AppendLog -eq $false)) {
+            $null = New-Item -ItemType file -Path $logFile -Force
+            ("" | Select-Object -Property Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File -Path $LogFile
         }
-        if ($UserSnapins.count -gt 0) {
-            foreach ($PSSnapin in $UserSnapins) {
-                [void]$sessionstate.ImportPSSnapIn($PSSnapin, [ref]$null)
-            }
+
+        #write initial log entry
+        $log = "" | Select-Object -Property Date, Action, Runtime, Status, Details
+        $log.Date = Get-Date
+        $log.Action = "Batch processing started"
+        $log.Runtime = $null
+        $log.Status = "Started"
+        $log.Details = $null
+        if ($logFile) {
+            ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1] | Out-File -Path $LogFile -Append
         }
-    }
-    if ($ImportFunctions -and $UserFunctions.count -gt 0) {
-        foreach ($FunctionDef in $UserFunctions) {
-            $sessionstate.Commands.Add((New-Object System.Management.Automation.Runspaces.SessionStateFunctionEntry -ArgumentList $FunctionDef.Name, $FunctionDef.ScriptBlock))
-        }
-    }
-
-    #Create runspace pool
-    $runspacepool = [runspacefactory]::CreateRunspacePool(1, $Throttle, $sessionstate, $Host)
-    $runspacepool.Open()
-
-    Write-Verbose "Creating empty collection to hold runspace jobs"
-    $Script:runspaces = New-Object System.Collections.ArrayList
-
-    #If inputObject is bound get a total count and set bound to true
-    $bound = $PSBoundParameters.keys -contains "InputObject"
-    if (-not $bound) {
-        [System.Collections.ArrayList]$allObjects = @()
-    }
-
-    #Set up log file if specified
-    if ( $LogFile -and (-not (Test-Path $LogFile) -or $AppendLog -eq $false)) {
-        New-Item -ItemType file -Path $logFile -Force | Out-Null
-        ("" | Select-Object -Property Date, Action, Runtime, Status, Details | ConvertTo-Csv -NoTypeInformation -Delimiter ";")[0] | Out-File $LogFile
-    }
-
-    #write initial log entry
-    $log = "" | Select-Object -Property Date, Action, Runtime, Status, Details
-    $log.Date = Get-Date
-    $log.Action = "Batch processing started"
-    $log.Runtime = $null
-    $log.Status = "Started"
-    $log.Details = $null
-    if ($logFile) {
-        ($log | ConvertTo-Csv -Delimiter ";" -NoTypeInformation)[1] | Out-File $LogFile -Append
-    }
-    $timedOutTasks = $false
-    #endregion INIT
+        $timedOutTasks = $false
+        #endregion INIT
     }
     Process {
         #add piped objects to all objects or set all objects to bound input object parameter
@@ -506,7 +505,7 @@ function Invoke-Parallel {
                 $powershell.RunspacePool = $runspacepool
 
                 #Create a temporary collection for each runspace
-                $temp = "" | Select-Object PowerShell, StartTime, object, Runspace
+                $temp = "" | Select-Object -Property PowerShell, StartTime, object, Runspace
                 $temp.PowerShell = $powershell
                 $temp.StartTime = Get-Date
                 $temp.object = $object
@@ -517,7 +516,7 @@ function Invoke-Parallel {
 
                 #Add the temp tracking info to $runspaces collection
                 Write-Verbose ( "Adding {0} to collection at {1}" -f $temp.object, $temp.starttime.tostring() )
-                $runspaces.Add($temp) | Out-Null
+                $null = $runspaces.Add($temp)
 
                 #loop through existing runspaces one time
                 Get-RunspaceData

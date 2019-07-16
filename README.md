@@ -27,10 +27,10 @@ This function will take in a script or scriptblock, and run it against specified
 
     $Path = 'C:\temp\'
 
-    'Server1', 'Server2' | Invoke-Parallel {
+    'Server1', 'Server2' | Invoke-Parallel -ScriptBlock {
 
         #Create a log file for this server, use the root $Path
-        $ThisPath = Join-Path $Using:Path "$_.log"
+        $ThisPath = Join-Path -Path $Using:Path -ChildPath "$_.log"
         "Doing something with $_" | Out-File -FilePath $ThisPath -Force
 
     }
@@ -39,13 +39,13 @@ This function will take in a script or scriptblock, and run it against specified
 # Import modules found in the current session
 
     #From https://psremoteregistry.codeplex.com/releases/view/65928
-    Import-Module PSRemoteRegistry
+    Import-Module -Name PSRemoteRegistry
 
     $ServerList | Invoke-Parallel -ImportModules -ScriptBlock {
 
         $Key = 'Software\Microsoft\Windows\CurrentVersion\Policies\System'
         Get-RegValue -ComputerName $_ -Hive LocalMachine -Key $Key |
-            Select ComputerName, Value, Data
+            Select-Object -Property ComputerName, Value, Data
 
     }
 
@@ -64,7 +64,7 @@ This function will take in a script or scriptblock, and run it against specified
 
     $ServerList | Invoke-Parallel -RunspaceTimeout 10 -NoCloseOnTimeout -ScriptBlock {
 
-            Get-WmiObject -Class Win32_OperatingSystem -ComputerName $_ | select -Property PSComputerName, Caption, Version
+            Get-WmiObject -Class Win32_OperatingSystem -ComputerName $_ | Select-Object -Property PSComputerName, Caption, Version
 
     }
 ```
