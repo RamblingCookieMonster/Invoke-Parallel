@@ -1,0 +1,35 @@
+{
+    // Generic Settings
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+    "files.trimFinalNewlines": true,
+    "editor.autoIndent": true,
+    "editor.trimAutoWhitespace": true,
+    "files.encoding": "utf8",
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": false,
+    "editor.formatOnType": true,
+
+    // PowerShell Generic Setting
+    "powershell.codeFormatting.preset": "Custom",
+    "powershell.scriptAnalysis.settingsPath": ".vscode\\analyzersettings.psd1",
+    "powershell.scriptAnalysis.enable": true,
+    "powershell.startAutomatically": true,
+
+    // PowerShell Code Formating
+    "powershell.codeFormatting.openBraceOnSameLine": true,
+    "powershell.codeFormatting.newLineAfterCloseBrace": true,
+    "powershell.codeFormatting.ignoreOneLineBlock": true,
+    "powershell.codeFormatting.newLineAfterOpenBrace": true,
+    "powershell.codeFormatting.pipelineIndentationStyle": "IncreaseIndentationForFirstPipeline",
+    "powershell.codeFormatting.whitespaceAroundPipe": true,
+    "powershell.codeFormatting.whitespaceInsideBrace": false,
+    "powershell.codeFormatting.whitespaceBeforeOpenBrace": true,
+    "powershell.codeFormatting.whitespaceBeforeOpenParen": true,
+    "powershell.codeFormatting.whitespaceAroundOperator": true,
+    "powershell.codeFormatting.whitespaceAfterSeparator": true,
+    "powershell.codeFormatting.alignPropertyValuePairs": true,
+    "powershell.codeFormatting.useCorrectCasing": true,
+}
