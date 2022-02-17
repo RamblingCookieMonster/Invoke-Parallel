@@ -34,6 +34,9 @@ function Invoke-Parallel {
 
     .PARAMETER ImportModules
         If specified, get loaded modules and pssnapins, add them to the initial session state
+    
+    .PARAMETER ImportFunctions
+        If specified, get loaded functions, add them to the initial session state
 
     .PARAMETER Throttle
         Maximum number of threads to run at a single time.
